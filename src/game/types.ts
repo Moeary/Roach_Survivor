@@ -1,4 +1,5 @@
 export type RunState = "running" | "paused" | "levelup" | "won" | "lost";
+export type DifficultyId = "easy" | "normal" | "hard";
 export type EnemyTypeId = "nymph" | "adult" | "guard" | "boss";
 export type DecorationType = "puddle" | "crumb" | "cap" | "drain" | "stain";
 export type ObstacleType = "pipe" | "barrel" | "trash";
@@ -160,6 +161,19 @@ export interface UpgradeSummaryItem {
   rank: number;
 }
 
+export interface DifficultyConfig {
+  id: DifficultyId;
+  label: string;
+  runDuration: number;
+  bossWaves: number;
+  description: string;
+}
+
+export interface RunSetup {
+  difficultyId: DifficultyId;
+  enabledUpgrades: UpgradeId[];
+}
+
 export interface EnemyTypeDefinition {
   id: EnemyTypeId;
   name: string;
@@ -182,6 +196,8 @@ export interface GameState {
     chunkSize: number;
     infinite: boolean;
   };
+  difficulty: DifficultyConfig;
+  enabledUpgrades: UpgradeId[];
   runDuration: number;
   runState: RunState;
   timer: number;
@@ -203,6 +219,8 @@ export interface GameState {
   lastUpgradeName: string;
   bossSpawned: boolean;
   bossDefeated: boolean;
+  bossWavesSpawned: number;
+  bossWavesDefeated: number;
   spawnTimer: number;
   nextEnemyId: number;
   nextProjectileId: number;

@@ -13,21 +13,20 @@ import {
   updateGame,
 } from "../game/core";
 import { summarizeUpgrades } from "../game/upgrades";
-import type {
-  Decoration,
-  EffectEntity,
-  GameState,
-  InputState,
-  ObstacleEntity,
-  OrbitalEntity,
-  PickupEntity,
-  ProjectileEntity,
-} from "../game/types";
+import type { GameState, InputState, RunSetup } from "../game/types";
 import EnemySprite from "./sprites/enemies/EnemySprite";
 import PlayerSprite from "./sprites/player/PlayerSprite";
+import EffectSprite from "./sprites/world/EffectSprite";
+import MapBackdrop from "./sprites/world/MapBackdrop";
+import ObstacleSprite from "./sprites/world/ObstacleSprite";
+import OrbitalSprite from "./sprites/world/OrbitalSprite";
+import PickupSprite from "./sprites/world/PickupSprite";
+import ProjectileSprite from "./sprites/world/ProjectileSprite";
+import WorldDefs from "./sprites/world/WorldDefs";
 
 interface GameScreenProps {
   onReturnToMenu: () => void;
+  setup: RunSetup;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -45,167 +44,6 @@ function isVisible(x: number, y: number, radius: number, state: GameState, margi
   const top = camera.y - state.viewport.height / 2 - margin;
   const bottom = camera.y + state.viewport.height / 2 + margin;
   return x + radius >= left && x - radius <= right && y + radius >= top && y - radius <= bottom;
-}
-
-function renderMap(camera: { x: number; y: number }, decorations: Decoration[], map: GameState["map"]) {
-  const left = camera.x - map.width / 2;
-  const top = camera.y - map.height / 2;
-  const right = left + map.width;
-  const bottom = top + map.height;
-  const laneSpacing = 220;
-  const gutterSpacing = 340;
-  const laneStart = Math.floor(top / laneSpacing) - 2;
-  const laneCount = Math.ceil(map.height / laneSpacing) + 4;
-  const gutterStart = Math.floor(left / gutterSpacing) - 2;
-  const gutterCount = Math.ceil(map.width / gutterSpacing) + 4;
-
-  const laneMarkup = Array.from({ length: laneCount }, (_, index) => {
-    const row = laneStart + index;
-    const y = row * laneSpacing + 140;
-    return (
-      <path
-        key={"lane-" + row}
-        d={`M ${left - 220} ${y} C ${left + map.width * 0.24} ${y + 28}, ${left + map.width * 0.62} ${y - 42}, ${right + 220} ${y + 20}`}
-        stroke="rgba(164, 190, 110, 0.07)"
-        strokeWidth="18"
-        fill="none"
-      />
-    );
-  });
-
-  const gutterMarkup = Array.from({ length: gutterCount }, (_, index) => {
-    const column = gutterStart + index;
-    const x = column * gutterSpacing + 110;
-    return (
-      <path
-        key={"gutter-" + column}
-        d={`M ${x} ${top - 180} C ${x + 18} ${top + map.height * 0.3}, ${x - 22} ${top + map.height * 0.66}, ${x + 14} ${bottom + 180}`}
-        stroke="rgba(255, 160, 79, 0.06)"
-        strokeWidth="24"
-        fill="none"
-      />
-    );
-  });
-
-  return (
-    <>
-      <rect x={left} y={top} width={map.width} height={map.height} fill="url(#floorGradient)" />
-      <rect x={left} y={top} width={map.width} height={map.height} fill="url(#sewerGrid)" opacity="0.86" />
-      <rect x={left} y={top} width={map.width} height={map.height} fill="url(#sewerScratches)" opacity="0.2" />
-      {laneMarkup}
-      {gutterMarkup}
-      {decorations.map((prop) => {
-        if (prop.type === "puddle") {
-          return (
-            <g key={prop.id} transform={`translate(${toFixed(prop.x)} ${toFixed(prop.y)}) rotate(${toFixed(prop.rotation)}) scale(${toFixed(prop.scale)})`}>
-              <ellipse rx="54" ry="30" fill="rgba(113, 210, 87, 0.12)" />
-              <ellipse rx="34" ry="18" fill="rgba(214, 239, 109, 0.08)" />
-            </g>
-          );
-        }
-
-        if (prop.type === "crumb") {
-          return (
-            <g key={prop.id} transform={`translate(${toFixed(prop.x)} ${toFixed(prop.y)}) rotate(${toFixed(prop.rotation)}) scale(${toFixed(prop.scale)})`}>
-              <polygon points="-18,-10 14,-16 22,4 -2,18 -24,2" fill="#8e6d3f" />
-              <polygon points="-6,-2 8,-6 10,2 -2,8" fill="#c7a26a" />
-            </g>
-          );
-        }
-
-        if (prop.type === "cap") {
-          return (
-            <g key={prop.id} transform={`translate(${toFixed(prop.x)} ${toFixed(prop.y)}) rotate(${toFixed(prop.rotation)}) scale(${toFixed(prop.scale)})`}>
-              <circle r="26" fill="#345468" />
-              <circle r="16" fill="#233641" />
-              <circle r="7" fill="#a0d5f8" />
-            </g>
-          );
-        }
-
-        if (prop.type === "drain") {
-          return (
-            <g key={prop.id} transform={`translate(${toFixed(prop.x)} ${toFixed(prop.y)}) rotate(${toFixed(prop.rotation)}) scale(${toFixed(prop.scale)})`}>
-              <rect x="-34" y="-22" width="68" height="44" rx="8" fill="#26322c" />
-              <path d="M -24 -12 H 24 M -24 0 H 24 M -24 12 H 24" stroke="#8e9e7d" strokeWidth="4" strokeLinecap="round" />
-            </g>
-          );
-        }
-
-        return (
-          <g key={prop.id} transform={`translate(${toFixed(prop.x)} ${toFixed(prop.y)}) rotate(${toFixed(prop.rotation)}) scale(${toFixed(prop.scale)})`}>
-            <ellipse rx="46" ry="20" fill="rgba(74, 43, 24, 0.22)" />
-            <ellipse rx="26" ry="10" fill="rgba(118, 83, 56, 0.18)" />
-          </g>
-        );
-      })}
-    </>
-  );
-}
-
-function PickupSprite({ pickup }: { pickup: PickupEntity }) {
-  return (
-    <g transform={`translate(${toFixed(pickup.x)} ${toFixed(pickup.y)})`}>
-      <circle r={toFixed(pickup.radius + 8)} fill="url(#slimeGlow)" opacity="0.42" />
-      <circle r={toFixed(pickup.radius)} fill="#d7f06d" />
-      <circle r={toFixed(Math.max(4, pickup.radius * 0.42))} fill="#f7ffe0" />
-    </g>
-  );
-}
-
-function ProjectileSprite({ projectile }: { projectile: ProjectileEntity }) {
-  const angle = (projectile.angle * 180) / Math.PI;
-  return (
-    <g transform={`translate(${toFixed(projectile.x)} ${toFixed(projectile.y)}) rotate(${toFixed(angle)})`}>
-      <ellipse cx="-8" cy="0" rx="16" ry="7" fill="rgba(198, 255, 92, 0.16)" />
-      <ellipse rx={projectile.variant === "auto" ? "12" : "15"} ry={projectile.variant === "auto" ? "6" : "8"} fill={projectile.tint} />
-      <ellipse cx="4" rx={projectile.variant === "auto" ? "6" : "8"} ry={projectile.variant === "auto" ? "4" : "5"} fill="rgba(116, 86, 58, 0.55)" />
-    </g>
-  );
-}
-
-function OrbitalSprite({ orbital }: { orbital: OrbitalEntity }) {
-  return (
-    <g transform={`translate(${toFixed(orbital.x)} ${toFixed(orbital.y)})`} opacity={orbital.active ? 1 : 0.3}>
-      <circle r={toFixed(orbital.radius + 8)} fill="url(#slimeGlow)" opacity={orbital.active ? 0.24 : 0.12} />
-      <ellipse rx={toFixed(orbital.radius + 2)} ry={toFixed(orbital.radius * 0.7)} fill={orbital.active ? "#f4f0d2" : "rgba(244, 240, 210, 0.35)"} />
-      <ellipse cx="4" rx={toFixed(orbital.radius * 0.48)} ry={toFixed(orbital.radius * 0.34)} fill={orbital.active ? "#d8c89d" : "rgba(216, 200, 157, 0.25)"} />
-    </g>
-  );
-}
-
-function ObstacleSprite({ obstacle }: { obstacle: ObstacleEntity }) {
-  if (obstacle.type === "pipe") {
-    return (
-      <g transform={`translate(${toFixed(obstacle.x)} ${toFixed(obstacle.y)}) rotate(${toFixed(obstacle.rotation)}) scale(${toFixed(obstacle.scale)})`}>
-        <ellipse cx="0" cy={toFixed(obstacle.radius * 0.8)} rx={toFixed(obstacle.radius * 1.15)} ry={toFixed(obstacle.radius * 0.42)} fill="rgba(0, 0, 0, 0.28)" />
-        <circle r={toFixed(obstacle.radius)} fill="#314f55" stroke="#16242a" strokeWidth="8" />
-        <circle r={toFixed(obstacle.radius * 0.6)} fill="#4b7580" stroke="#9bc3cf" strokeWidth="4" />
-        <path d={`M -${toFixed(obstacle.radius * 0.66)} 0 H ${toFixed(obstacle.radius * 0.66)}`} stroke="#9bc3cf" strokeWidth="6" strokeLinecap="round" />
-      </g>
-    );
-  }
-
-  if (obstacle.type === "barrel") {
-    return (
-      <g transform={`translate(${toFixed(obstacle.x)} ${toFixed(obstacle.y)}) rotate(${toFixed(obstacle.rotation)}) scale(${toFixed(obstacle.scale)})`}>
-        <ellipse cx="0" cy={toFixed(obstacle.radius * 0.8)} rx={toFixed(obstacle.radius * 1.1)} ry={toFixed(obstacle.radius * 0.38)} fill="rgba(0, 0, 0, 0.28)" />
-        <rect x={toFixed(-obstacle.radius * 0.78)} y={toFixed(-obstacle.radius * 0.94)} width={toFixed(obstacle.radius * 1.56)} height={toFixed(obstacle.radius * 1.9)} rx={toFixed(obstacle.radius * 0.3)} fill="#7f5a34" stroke="#352315" strokeWidth="7" />
-        <path d={`M -${toFixed(obstacle.radius * 0.76)} -${toFixed(obstacle.radius * 0.34)} H ${toFixed(obstacle.radius * 0.76)}`} stroke="#d8b27b" strokeWidth="5" />
-        <path d={`M -${toFixed(obstacle.radius * 0.76)} ${toFixed(obstacle.radius * 0.42)} H ${toFixed(obstacle.radius * 0.76)}`} stroke="#d8b27b" strokeWidth="5" />
-      </g>
-    );
-  }
-
-  return (
-    <g transform={`translate(${toFixed(obstacle.x)} ${toFixed(obstacle.y)}) rotate(${toFixed(obstacle.rotation)}) scale(${toFixed(obstacle.scale)})`}>
-      <ellipse cx="0" cy={toFixed(obstacle.radius * 0.78)} rx={toFixed(obstacle.radius * 1.18)} ry={toFixed(obstacle.radius * 0.44)} fill="rgba(0, 0, 0, 0.3)" />
-      <ellipse rx={toFixed(obstacle.radius * 1.12)} ry={toFixed(obstacle.radius * 0.9)} fill="#594134" stroke="#251713" strokeWidth="7" />
-      <ellipse rx={toFixed(obstacle.radius * 0.7)} ry={toFixed(obstacle.radius * 0.54)} fill="#8f6b4e" />
-      <circle cx={toFixed(-obstacle.radius * 0.28)} cy={toFixed(-obstacle.radius * 0.08)} r={toFixed(obstacle.radius * 0.14)} fill="#2c1c16" />
-      <circle cx={toFixed(obstacle.radius * 0.18)} cy={toFixed(obstacle.radius * 0.1)} r={toFixed(obstacle.radius * 0.12)} fill="#2c1c16" />
-    </g>
-  );
 }
 
 function AimReticle({ state, input }: { state: GameState; input: InputState }) {
@@ -228,21 +66,8 @@ function AimReticle({ state, input }: { state: GameState; input: InputState }) {
   );
 }
 
-function EffectSprite({ effect }: { effect: EffectEntity }) {
-  const progress = effect.age / effect.duration;
-  const radius = effect.radius * (0.5 + progress * 1.2);
-  const opacity = clamp(1 - progress, 0, 1);
-
-  return (
-    <g transform={`translate(${toFixed(effect.x)} ${toFixed(effect.y)})`} opacity={toFixed(opacity)}>
-      <circle r={toFixed(radius)} fill={effect.tint} opacity="0.26" />
-      <circle r={toFixed(radius * 0.5)} fill={effect.tint} opacity="0.5" />
-    </g>
-  );
-}
-
-export default function GameScreen({ onReturnToMenu }: GameScreenProps) {
-  const stateRef = useRef<GameState>(createGameState());
+export default function GameScreen({ onReturnToMenu, setup }: GameScreenProps) {
+  const stateRef = useRef<GameState>(createGameState(setup));
   const inputRef = useRef<InputState>(createInputState());
   const frameRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number>(performance.now());
@@ -254,7 +79,7 @@ export default function GameScreen({ onReturnToMenu }: GameScreenProps) {
   }
 
   function restartRun() {
-    stateRef.current = createGameState();
+    stateRef.current = createGameState(setup);
     resetInputState(inputRef.current);
     lastFrameRef.current = performance.now();
     refresh();
@@ -398,6 +223,9 @@ export default function GameScreen({ onReturnToMenu }: GameScreenProps) {
   const summary = summarizeUpgrades(state);
   const healthRatio = clamp(state.player.hp / state.player.maxHp, 0, 1);
   const xpRatio = clamp(state.xp / state.xpToNext, 0, 1);
+  const targetText = `存活 ${formatTime(state.runDuration)} 并击败 ${state.difficulty.bossWaves} 波 Boss`;
+  const difficultyText = `${state.difficulty.label} / ${state.difficulty.bossWaves} 波 Boss`;
+  const bossTitle = `母巢女王 第 ${state.bossWavesSpawned} 波`;
   const visibleDecorations = state.decorations.filter((decoration) => isVisible(decoration.x, decoration.y, 88, state, 340));
   const visibleObstacles = state.obstacles.filter((obstacle) => isVisible(obstacle.x, obstacle.y, obstacle.radius * 1.4, state, 340));
   const visiblePickups = state.pickups.filter((pickup) => isVisible(pickup.x, pickup.y, pickup.radius, state));
@@ -425,34 +253,12 @@ export default function GameScreen({ onReturnToMenu }: GameScreenProps) {
           refresh();
         }}
       >
-        <defs>
-          <linearGradient id="floorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#314238" />
-            <stop offset="42%" stopColor="#213129" />
-            <stop offset="100%" stopColor="#161f1b" />
-          </linearGradient>
-          <pattern id="sewerGrid" width="180" height="180" patternUnits="userSpaceOnUse">
-            <rect width="180" height="180" fill="transparent" />
-            <path d="M 0 48 H 180" stroke="rgba(196, 225, 110, 0.08)" strokeWidth="3" />
-            <path d="M 0 132 H 180" stroke="rgba(196, 225, 110, 0.06)" strokeWidth="2" />
-            <path d="M 48 0 V 180" stroke="rgba(255, 184, 77, 0.05)" strokeWidth="2" />
-            <path d="M 132 0 V 180" stroke="rgba(255, 184, 77, 0.04)" strokeWidth="2" />
-          </pattern>
-          <pattern id="sewerScratches" width="280" height="280" patternUnits="userSpaceOnUse">
-            <path d="M 12 240 L 92 168 M 138 40 L 200 0 M 192 220 L 264 156" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="3" strokeLinecap="round" />
-            <path d="M 18 68 L 54 42 M 172 120 L 236 82" stroke="rgba(214, 239, 109, 0.04)" strokeWidth="2" strokeLinecap="round" />
-          </pattern>
-          <radialGradient id="slimeGlow" cx="50%" cy="50%" r="60%">
-            <stop offset="0%" stopColor="rgba(198, 255, 92, 0.9)" />
-            <stop offset="100%" stopColor="rgba(198, 255, 92, 0)" />
-          </radialGradient>
-          <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="6" />
-          </filter>
-        </defs>
+        <WorldDefs />
 
         <g transform={`translate(${toFixed(translateX)} ${toFixed(translateY)})`}>
-          <g>{renderMap(camera, visibleDecorations, state.map)}</g>
+          <g>
+            <MapBackdrop camera={camera} decorations={visibleDecorations} map={state.map} />
+          </g>
           <g>{visibleObstacles.map((obstacle) => <ObstacleSprite key={obstacle.id} obstacle={obstacle} />)}</g>
           <g>{visiblePickups.map((pickup) => <PickupSprite key={pickup.id} pickup={pickup} />)}</g>
           <g>{visibleEnemies.map((enemy) => <EnemySprite key={enemy.id} enemy={enemy} />)}</g>
@@ -490,11 +296,15 @@ export default function GameScreen({ onReturnToMenu }: GameScreenProps) {
             <span>瞄准</span>
             <strong>{input.aimActive ? "鼠标接管中" : "等待接管"}</strong>
           </div>
+          <div className="hud-pill">
+            <span>难度</span>
+            <strong>{difficultyText}</strong>
+          </div>
         </div>
 
         <div className="hud-target">
           <span>目标</span>
-          <strong>活过 05:00 并击败女王</strong>
+          <strong>{targetText}</strong>
           <em>Esc 释放瞄准 / P 暂停</em>
         </div>
       </div>
@@ -502,7 +312,7 @@ export default function GameScreen({ onReturnToMenu }: GameScreenProps) {
       {boss ? (
         <div className="boss-bar">
           <div className="boss-bar-head">
-            <span>母巢女王</span>
+            <span>{bossTitle}</span>
             <strong>
               {Math.ceil(boss.hp)} / {boss.maxHp}
             </strong>
@@ -604,8 +414,8 @@ export default function GameScreen({ onReturnToMenu }: GameScreenProps) {
             {state.runState === "won" ? (
               <>
                 <p className="menu-eyebrow">VICTORY</p>
-                <h2>母巢女王被你轰碎了</h2>
-                <p className="overlay-copy">你活过了五分钟，还把整片污水区最肥的一只蟑螂炸成了壳片。</p>
+                <h2>整片母巢被你轰穿了</h2>
+                <p className="overlay-copy">你撑过了 {formatTime(state.runDuration)}，并清掉了 {state.difficulty.bossWaves} 波 Boss，整个污水区都被你打成了空壳。</p>
                 <div className="modal-actions">
                   <button className="button-primary" type="button" onClick={restartRun}>
                     再来一局

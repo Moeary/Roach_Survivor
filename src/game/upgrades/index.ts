@@ -3,6 +3,10 @@ import { UPGRADE_DEFS } from "./definitions";
 
 const UPGRADE_MAP = new Map<UpgradeId, (typeof UPGRADE_DEFS)[number]>(UPGRADE_DEFS.map((upgrade) => [upgrade.id, upgrade]));
 
+function getActiveUpgradeDefs(state: GameState) {
+  return UPGRADE_DEFS.filter((upgrade) => state.enabledUpgrades.includes(upgrade.id));
+}
+
 function shuffle<T>(input: T[]): T[] {
   const array = input.slice();
 
@@ -17,8 +21,10 @@ function shuffle<T>(input: T[]): T[] {
 }
 
 export function pickUpgradeChoices(state: GameState, count = 3): UpgradeChoice[] {
-  return shuffle(UPGRADE_DEFS)
-    .slice(0, Math.min(count, UPGRADE_DEFS.length))
+  const activeUpgrades = getActiveUpgradeDefs(state);
+
+  return shuffle(activeUpgrades)
+    .slice(0, Math.min(count, activeUpgrades.length))
     .map((upgrade) => ({
       id: upgrade.id,
       name: upgrade.name,
@@ -44,12 +50,14 @@ export function applyUpgrade(state: GameState, upgradeId: UpgradeId): boolean {
 }
 
 export function summarizeUpgrades(state: GameState): UpgradeSummaryItem[] {
-  return UPGRADE_DEFS.map((upgrade) => ({
-    id: upgrade.id,
-    name: upgrade.name,
-    shortName: upgrade.shortName,
-    rank: state.upgradeLevels[upgrade.id] ?? 0,
-  })).filter((entry) => entry.rank > 0);
+  return getActiveUpgradeDefs(state)
+    .map((upgrade) => ({
+      id: upgrade.id,
+      name: upgrade.name,
+      shortName: upgrade.shortName,
+      rank: state.upgradeLevels[upgrade.id] ?? 0,
+    }))
+    .filter((entry) => entry.rank > 0);
 }
 
 export { UPGRADE_DEFS } from "./definitions";

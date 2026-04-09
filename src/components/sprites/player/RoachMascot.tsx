@@ -65,17 +65,17 @@ export function RoachMascot({ blink = false, scale = 1 }: RoachMascotProps) {
 
 export function RoachLogo({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 240 260" aria-hidden="true">
+    <svg className={className} viewBox="0 0 240 320" aria-hidden="true">
       <defs>
         <radialGradient id="roachLogoGlow" cx="50%" cy="46%" r="60%">
           <stop offset="0%" stopColor="rgba(247, 226, 160, 0.82)" />
           <stop offset="100%" stopColor="rgba(247, 226, 160, 0)" />
         </radialGradient>
       </defs>
-      <rect width="240" height="260" rx="54" fill="rgba(255, 255, 255, 0.03)" />
-      <circle cx="120" cy="124" r="92" fill="url(#roachLogoGlow)" />
-      <g transform="translate(120 140)">
-        <RoachMascot scale={1.58} />
+      <rect width="240" height="320" rx="54" fill="rgba(255, 255, 255, 0.03)" />
+      <circle cx="120" cy="136" r="98" fill="url(#roachLogoGlow)" />
+      <g transform="translate(120 154)">
+        <RoachMascot scale={1.62} />
       </g>
     </svg>
   );
