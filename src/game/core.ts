@@ -1,10 +1,11 @@
 ﻿import { applyUpgrade, pickUpgradeChoices } from "./upgrades";
+import { ENEMY_TYPES, pickEnemyTypeForTime } from "./entities/enemies";
+import { createPlayer } from "./entities/player";
 import type {
   Decoration,
   DecorationType,
   EffectEntity,
   EnemyEntity,
-  EnemyTypeDefinition,
   EnemyTypeId,
   GameState,
   InputState,
@@ -29,48 +30,6 @@ const CONTACT_COOLDOWN = 0.62;
 const PLAYER_SAFE_RADIUS = 210;
 const OBSTACLE_PADDING = 8;
 
-export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
-  nymph: {
-    id: "nymph",
-    name: "幼体",
-    radius: 18,
-    hp: 24,
-    speed: 124,
-    damage: 6,
-    xp: 1,
-    tint: "#d6bf80",
-  },
-  adult: {
-    id: "adult",
-    name: "成虫",
-    radius: 24,
-    hp: 46,
-    speed: 94,
-    damage: 10,
-    xp: 2,
-    tint: "#a75e34",
-  },
-  guard: {
-    id: "guard",
-    name: "厚壳卫兵",
-    radius: 34,
-    hp: 98,
-    speed: 66,
-    damage: 15,
-    xp: 4,
-    tint: "#54372c",
-  },
-  boss: {
-    id: "boss",
-    name: "母巢女王",
-    radius: 72,
-    hp: 1400,
-    speed: 62,
-    damage: 24,
-    xp: 0,
-    tint: "#7d2035",
-  },
-};
 
 function distance(aX: number, aY: number, bX: number, bY: number): number {
   return Math.hypot(bX - aX, bY - aY);
@@ -231,41 +190,6 @@ export function resetInputState(input: InputState): void {
   input.pointerScreenY = VIEWPORT_HEIGHT / 2;
 }
 
-function createPlayer(): PlayerEntity {
-  return {
-    id: "player",
-    type: "player",
-    x: 0,
-    y: 0,
-    vx: 0,
-    vy: 0,
-    radius: 28,
-    hp: 120,
-    maxHp: 120,
-    alive: true,
-    contactTimer: 0,
-    attackTimer: 0,
-    autoAttackTimer: 0,
-    facingAngle: 0,
-    aimAngle: 0,
-    stats: {
-      moveSpeed: 292,
-      projectileDamage: 26,
-      attackCooldown: 0.68,
-      projectileCount: 1,
-      projectilePierce: 0,
-      pickupRadius: 120,
-      projectileSpeed: 620,
-      autoTurretCount: 0,
-      autoTurretCooldown: 1.44,
-      orbitalCount: 0,
-      orbitalDamage: 22,
-      orbitalRespawn: 1.15,
-      orbitalDistance: 92,
-      orbitalSpeed: 3.7,
-    },
-  };
-}
 
 export function createGameState(): GameState {
   const state: GameState = {
@@ -499,39 +423,6 @@ function spawnEnemy(state: GameState, enemyTypeId: EnemyTypeId, position?: { x: 
   return enemy;
 }
 
-function pickEnemyTypeForTime(timer: number): EnemyTypeId {
-  const roll = Math.random();
-
-  if (timer < 45) {
-    return roll < 0.78 ? "nymph" : "adult";
-  }
-
-  if (timer < 120) {
-    if (roll < 0.48) {
-      return "nymph";
-    }
-
-    if (roll < 0.9) {
-      return "adult";
-    }
-
-    return "guard";
-  }
-
-  if (timer < 220) {
-    if (roll < 0.2) {
-      return "nymph";
-    }
-
-    if (roll < 0.72) {
-      return "adult";
-    }
-
-    return "guard";
-  }
-
-  return roll < 0.15 ? "adult" : "guard";
-}
 
 function spawnBoss(state: GameState): void {
   if (state.bossSpawned) {
@@ -1121,3 +1012,5 @@ export function formatTime(seconds: number): string {
   const remainder = String(wholeSeconds % 60).padStart(2, "0");
   return minutes + ":" + remainder;
 }
+
+

@@ -56,10 +56,8 @@ select {
 }
 
 .menu-screen {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-  gap: 24px;
-  padding: 32px;
+  display: block;
+  padding: 24px;
   background:
     radial-gradient(circle at 20% 20%, rgba(166, 255, 92, 0.09), transparent 20%),
     radial-gradient(circle at 82% 80%, rgba(255, 180, 77, 0.12), transparent 18%),
@@ -117,8 +115,11 @@ select {
 .hero-panel {
   position: relative;
   z-index: 1;
-  align-self: center;
-  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: calc(100dvh - 48px);
+  padding: 42px clamp(24px, 4.2vw, 56px);
   border-radius: 32px;
   background:
     linear-gradient(135deg, rgba(24, 34, 28, 0.96), rgba(10, 14, 12, 0.92)),
@@ -141,58 +142,40 @@ select {
   pointer-events: none;
   }
 
-.hero-header {
+.hero-main {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
-  gap: 22px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 28px;
+  align-items: center;
+  flex: 1;
 }
 
 .hero-copy-block {
-  display: grid;
-  gap: 0;
+  align-self: center;
+  max-width: 760px;
 }
 
-.hero-logo-card {
+.hero-logo-stage {
   position: relative;
   overflow: hidden;
-  padding: 16px;
+  justify-self: end;
+  width: min(100%, 340px);
+  align-self: center;
+  padding: 18px;
   border: 1px solid rgba(214, 239, 109, 0.12);
-  border-radius: 28px;
+  border-radius: 36px;
   background:
-    radial-gradient(circle at 50% 25%, rgba(255, 220, 150, 0.12), transparent 54%),
+    radial-gradient(circle at 50% 28%, rgba(255, 220, 150, 0.16), transparent 58%),
     rgba(255, 255, 255, 0.03);
+  box-shadow: 0 28px 56px rgba(0, 0, 0, 0.34);
 }
 
 .hero-logo-art {
   display: block;
   width: 100%;
   height: auto;
-}
-
-.hero-logo-copy {
-  display: grid;
-  gap: 6px;
-  margin-top: 10px;
-}
-
-.hero-logo-copy span {
-  color: var(--lime);
-  font-size: 0.74rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.hero-logo-copy strong {
-  font-size: 1.04rem;
-}
-
-.hero-logo-copy p {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.5;
 }
 
 .menu-eyebrow {
@@ -215,9 +198,9 @@ select {
 }
 
 .hero-panel h1 {
-  max-width: 8ch;
-  font-size: clamp(4.6rem, 11vw, 9.4rem);
-  line-height: 0.88;
+  max-width: none;
+  font-size: clamp(5rem, 18vw, 11rem);
+  line-height: 0.9;
 }
 
 .hero-copy,
@@ -243,7 +226,7 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
-  margin-top: 28px;
+  margin-top: 34px;
 }
 
 .button-primary,
@@ -330,6 +313,16 @@ select {
   gap: 16px;
 }
 
+.menu-footnote-inline {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(214, 239, 109, 0.12);
+}
+
 .menu-footnote div {
   display: flex;
   flex-direction: column;
@@ -372,6 +365,43 @@ select {
   grid-template-columns: 1fr 1fr;
   gap: 18px;
   margin-top: 22px;
+}
+
+.changelog-list {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.changelog-entry {
+  padding: 18px;
+  border: 1px solid rgba(214, 239, 109, 0.12);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.changelog-head {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.changelog-head span {
+  color: var(--lime);
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.changelog-head h3 {
+  margin: 0;
+  font-size: 1.42rem;
+}
+
+.changelog-head p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
 }
 
 .tutorial-block {
@@ -622,11 +652,7 @@ select {
 }
 
 @media (max-width: 1024px) {
-  .menu-screen {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-header {
+  .hero-main {
     grid-template-columns: 1fr;
   }
 
@@ -637,10 +663,6 @@ select {
   .menu-footnote {
     position: static;
     margin-top: 8px;
-  }
-
-  .feature-grid {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -655,6 +677,11 @@ select {
   .tutorial-modal,
   .overlay-card {
     padding: 22px;
+  }
+
+  .hero-logo-stage {
+    justify-self: stretch;
+    width: min(100%, 320px);
   }
 
   .aim-hint {
