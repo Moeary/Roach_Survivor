@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "v0.4 Difficulty & Debug Setup",
+    date: "2026-04-09",
+    summary: "加入难度轮盘、本局 Buff 开关，并把战场 world sprites 继续拆分。",
+    items: [
+      "主页可切换简单、普通、困难三档，对应 5 / 10 / 15 分钟和 1 / 2 / 3 波 Boss。",
+      "新增自定义 Buff 弹窗，默认全开，但至少保留 3 个升级池用于平衡测试。",
+      "主角不再整只旋转，只保留发射方向旋转；地图 defs 也从 GameScreen 中拆出。",
+    ],
+  },
+  {
     version: "v0.3 Menu & Asset Refactor",
     date: "2026-04-09",
     summary: "主页收束成单面板，主角/敌人/升级数据开始拆分到独立目录。",

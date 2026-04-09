@@ -1,6 +1,7 @@
 ﻿import { applyUpgrade, pickUpgradeChoices } from "./upgrades";
 import { ENEMY_TYPES, pickEnemyTypeForTime } from "./entities/enemies";
 import { createPlayer } from "./entities/player";
+import { getDifficultyConfig, normalizeRunSetup } from "./run/config";
 import type {
   Decoration,
   DecorationType,
@@ -16,6 +17,7 @@ import type {
   PlayerEntity,
   ProjectileEntity,
   ProjectileVariant,
+  RunSetup,
   UpgradeId,
 } from "./types";
 
@@ -25,7 +27,6 @@ const MAP_RENDER_WIDTH = VIEWPORT_WIDTH * 3;
 const MAP_RENDER_HEIGHT = VIEWPORT_HEIGHT * 3;
 const CHUNK_SIZE = 680;
 const WORLD_GENERATION_RADIUS = 2;
-const RUN_DURATION = 300;
 const CONTACT_COOLDOWN = 0.62;
 const PLAYER_SAFE_RADIUS = 210;
 const OBSTACLE_PADDING = 8;
@@ -190,8 +191,13 @@ export function resetInputState(input: InputState): void {
   input.pointerScreenY = VIEWPORT_HEIGHT / 2;
 }
 
+function getBossWaveInterval(state: GameState): number {
+  return state.runDuration / state.difficulty.bossWaves;
+}
 
-export function createGameState(): GameState {
+export function createGameState(setup?: RunSetup): GameState {
+  const normalizedSetup = normalizeRunSetup(setup);
+  const difficulty = getDifficultyConfig(normalizedSetup.difficultyId);
   const state: GameState = {
     viewport: {
       width: VIEWPORT_WIDTH,
@@ -203,7 +209,9 @@ export function createGameState(): GameState {
       chunkSize: CHUNK_SIZE,
       infinite: true,
     },
-    runDuration: RUN_DURATION,
+    difficulty,
+    enabledUpgrades: normalizedSetup.enabledUpgrades.slice(),
+    runDuration: difficulty.runDuration,
     runState: "running",
     timer: 0,
     player: createPlayer(),
@@ -224,6 +232,8 @@ export function createGameState(): GameState {
     lastUpgradeName: "",
     bossSpawned: false,
     bossDefeated: false,
+    bossWavesSpawned: 0,
+    bossWavesDefeated: 0,
     spawnTimer: 0.45,
     nextEnemyId: 0,
     nextProjectileId: 0,
@@ -244,14 +254,16 @@ export function createGameState(): GameState {
 
 export function getPhaseLabel(state: GameState): string {
   if (state.bossSpawned && !state.bossDefeated) {
-    return "母巢清算";
+    return `母巢清算 ${state.bossWavesSpawned}/${state.difficulty.bossWaves}`;
   }
 
-  if (state.timer < 60) {
+  const progress = state.timer / state.runDuration;
+
+  if (progress < 0.2) {
     return "孵化期";
   }
 
-  if (state.timer < 180) {
+  if (progress < 0.68) {
     return "泛滥期";
   }
 
@@ -268,7 +280,7 @@ export function getStatusLabel(state: GameState): string {
   }
 
   if (state.runState === "won") {
-    return "女王粉碎";
+    return "巢穴清空";
   }
 
   if (state.runState === "lost") {
@@ -276,7 +288,7 @@ export function getStatusLabel(state: GameState): string {
   }
 
   if (state.bossSpawned && !state.bossDefeated) {
-    return "Boss 战";
+    return `Boss 战 ${state.bossWavesSpawned}/${state.difficulty.bossWaves}`;
   }
 
   return "生存中";
@@ -352,8 +364,14 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity): void {
   });
 
   if (enemy.type === "boss") {
-    state.bossDefeated = true;
-    state.runState = "won";
+    state.bossSpawned = false;
+    state.bossWavesDefeated += 1;
+
+    if (state.bossWavesDefeated >= state.difficulty.bossWaves) {
+      state.bossDefeated = true;
+      state.runState = "won";
+    }
+
     return;
   }
 
@@ -425,13 +443,21 @@ function spawnEnemy(state: GameState, enemyTypeId: EnemyTypeId, position?: { x: 
 
 
 function spawnBoss(state: GameState): void {
-  if (state.bossSpawned) {
+  if (state.bossSpawned || state.bossWavesSpawned >= state.difficulty.bossWaves) {
     return;
   }
 
+  const bossWave = state.bossWavesSpawned + 1;
   state.bossSpawned = true;
   const position = findSpawnPosition(state, ENEMY_TYPES.boss.radius, 720, 860);
-  spawnEnemy(state, "boss", position);
+  const boss = spawnEnemy(state, "boss", position);
+  const waveMultiplier = 1 + (bossWave - 1) * 0.35;
+  boss.maxHp = Math.round(boss.maxHp * waveMultiplier);
+  boss.hp = boss.maxHp;
+  boss.damage = Math.round(boss.damage * (1 + (bossWave - 1) * 0.18));
+  boss.speed *= 1 + (bossWave - 1) * 0.06;
+  boss.radius += (bossWave - 1) * 4;
+  state.bossWavesSpawned = bossWave;
   createEffect(state, {
     x: position.x,
     y: position.y,
@@ -940,7 +966,7 @@ export function updateGame(state: GameState, input: InputState, deltaSeconds: nu
 
   ensureWorldAroundPlayer(state);
 
-  if (state.timer >= state.runDuration) {
+  if (state.timer >= getBossWaveInterval(state) * (state.bossWavesSpawned + 1)) {
     spawnBoss(state);
   }
 
