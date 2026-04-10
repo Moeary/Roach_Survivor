@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "v0.5 Meta Progression & Audio",
+    date: "2026-04-09",
+    summary: "加入金色卵鞘收集、局外成长和分阶段音频入口。",
+    items: [
+      "普通怪开始以极低概率掉落金色卵鞘，Boss 波次按难度固定掉落并支持结算自动收集。",
+      "主页新增局外升级面板，可消耗金色卵鞘强化开局攻击、移速和血量，进度用 Cookie 持久化。",
+      "新增透明作弊热区和音频控制器，预留分波次 BGM、发射音效和击杀音效的资源入口。",
+    ],
+  },
+  {
     version: "v0.4 Difficulty & Debug Setup",
     date: "2026-04-09",
     summary: "加入难度轮盘、本局 Buff 开关，并把战场 world sprites 继续拆分。",
