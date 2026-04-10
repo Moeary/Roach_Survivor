@@ -1,3 +1,4 @@
+import { EMPTY_META_UPGRADES, normalizeMetaUpgrades } from "../meta";
 import { UPGRADE_DEFS } from "../upgrades";
 import type { DifficultyConfig, DifficultyId, RunSetup, UpgradeId } from "../types";
 
@@ -32,6 +33,7 @@ export const ALL_UPGRADE_IDS: UpgradeId[] = UPGRADE_DEFS.map((upgrade) => upgrad
 export const DEFAULT_RUN_SETUP: RunSetup = {
   difficultyId: "easy",
   enabledUpgrades: ALL_UPGRADE_IDS,
+  metaUpgrades: EMPTY_META_UPGRADES,
 };
 
 export function getDifficultyConfig(difficultyId: DifficultyId): DifficultyConfig {
@@ -43,5 +45,6 @@ export function normalizeRunSetup(setup?: Partial<RunSetup>): RunSetup {
   return {
     difficultyId: setup?.difficultyId ?? DEFAULT_RUN_SETUP.difficultyId,
     enabledUpgrades: selected.length >= 3 ? selected : ALL_UPGRADE_IDS,
+    metaUpgrades: normalizeMetaUpgrades(setup?.metaUpgrades),
   };
 }

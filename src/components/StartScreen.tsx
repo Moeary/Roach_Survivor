@@ -5,10 +5,13 @@ import { RoachLogo } from "./sprites/player/RoachMascot";
 interface StartScreenProps {
   difficultyId: DifficultyId;
   enabledBuffCount: number;
+  goldenEggs: number;
   totalBuffCount: number;
   onOpenBuffSetup: () => void;
   onOpenChangelog: () => void;
+  onOpenMetaUpgrade: () => void;
   onOpenTutorial: () => void;
+  onCheatGoldenEggs: () => void;
   onSelectDifficulty: (difficultyId: DifficultyId) => void;
   onStart: () => void;
 }
@@ -16,10 +19,13 @@ interface StartScreenProps {
 export default function StartScreen({
   difficultyId,
   enabledBuffCount,
+  goldenEggs,
   totalBuffCount,
   onOpenBuffSetup,
   onOpenChangelog,
+  onOpenMetaUpgrade,
   onOpenTutorial,
+  onCheatGoldenEggs,
   onSelectDifficulty,
   onStart,
 }: StartScreenProps) {
@@ -31,7 +37,10 @@ export default function StartScreen({
       <section className="hero-panel">
         <div className="hero-main">
           <div className="hero-copy-block">
-            <p className="menu-eyebrow">ROACH SURVIVOR</p>
+            <div className="menu-eyebrow-row">
+              <p className="menu-eyebrow">ROACH SURVIVOR</p>
+              <button className="cheat-trigger" type="button" onClick={onCheatGoldenEggs} aria-label="测试用：增加 100 金色卵鞘" />
+            </div>
             <h1>卵鞘危机</h1>
 
             <div className="hero-actions">
@@ -77,6 +86,15 @@ export default function StartScreen({
                   自定义 Buff
                 </button>
               </section>
+
+              <section className="config-card">
+                <span>局外成长</span>
+                <strong>{goldenEggs} 枚金色卵鞘</strong>
+                <p>可用来强化主角开局攻击、速度和血量。数据会通过 Cookie 保存在本地。</p>
+                <button className="button-secondary" type="button" onClick={onOpenMetaUpgrade}>
+                  外部升级
+                </button>
+              </section>
             </div>
           </div>
 
@@ -94,7 +112,7 @@ export default function StartScreen({
           </div>
           <div>
             <span>当前版本</span>
-            <strong>v0.4 Difficulty & Debug Setup</strong>
+            <strong>v0.5 Meta Progression & Audio</strong>
           </div>
         </section>
       </section>

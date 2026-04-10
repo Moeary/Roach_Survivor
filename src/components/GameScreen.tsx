@@ -3,15 +3,18 @@ import {
   chooseUpgrade,
   createGameState,
   createInputState,
+  drainGameEvents,
   formatTime,
   getBoss,
   getCamera,
   getPhaseLabel,
   getStatusLabel,
+  refreshUpgradeChoices,
   resetInputState,
   togglePause,
   updateGame,
 } from "../game/core";
+import { GameAudioController, getBgmTrackForState } from "../audio/gameAudio";
 import { summarizeUpgrades } from "../game/upgrades";
 import type { GameState, InputState, RunSetup } from "../game/types";
 import EnemySprite from "./sprites/enemies/EnemySprite";
@@ -25,6 +28,7 @@ import ProjectileSprite from "./sprites/world/ProjectileSprite";
 import WorldDefs from "./sprites/world/WorldDefs";
 
 interface GameScreenProps {
+  onAwardGoldenEggs: (amount: number) => void;
   onReturnToMenu: () => void;
   setup: RunSetup;
 }
@@ -66,13 +70,19 @@ function AimReticle({ state, input }: { state: GameState; input: InputState }) {
   );
 }
 
-export default function GameScreen({ onReturnToMenu, setup }: GameScreenProps) {
+export default function GameScreen({ onAwardGoldenEggs, onReturnToMenu, setup }: GameScreenProps) {
   const stateRef = useRef<GameState>(createGameState(setup));
   const inputRef = useRef<InputState>(createInputState());
   const frameRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number>(performance.now());
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const awardGoldenEggsRef = useRef(onAwardGoldenEggs);
+  const audioRef = useRef<GameAudioController | null>(null);
   const [, forceRender] = useState(0);
+
+  if (!audioRef.current) {
+    audioRef.current = new GameAudioController();
+  }
 
   function refresh() {
     forceRender((value) => value + 1);
@@ -101,6 +111,16 @@ export default function GameScreen({ onReturnToMenu, setup }: GameScreenProps) {
     return didChoose;
   }
 
+  function rerollChoices() {
+    const didRefresh = refreshUpgradeChoices(stateRef.current);
+
+    if (didRefresh) {
+      refresh();
+    }
+
+    return didRefresh;
+  }
+
   function updatePointerPosition(clientX: number, clientY: number) {
     const svg = svgRef.current;
 
@@ -118,6 +138,10 @@ export default function GameScreen({ onReturnToMenu, setup }: GameScreenProps) {
   }
 
   useEffect(() => {
+    awardGoldenEggsRef.current = onAwardGoldenEggs;
+  }, [onAwardGoldenEggs]);
+
+  useEffect(() => {
     function setDirection(code: string, pressed: boolean) {
       if (code === "KeyW" || code === "ArrowUp") {
         inputRef.current.up = pressed;
@@ -133,6 +157,7 @@ export default function GameScreen({ onReturnToMenu, setup }: GameScreenProps) {
     function handleKeyDown(event: KeyboardEvent) {
       const state = stateRef.current;
       const code = event.code;
+      audioRef.current?.unlock();
 
       if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(code)) {
         event.preventDefault();
@@ -154,6 +179,12 @@ export default function GameScreen({ onReturnToMenu, setup }: GameScreenProps) {
       }
 
       if (state.runState === "levelup" && !event.repeat) {
+        if (code === "KeyR") {
+          event.preventDefault();
+          rerollChoices();
+          return;
+        }
+
         if (code === "Digit1") {
           event.preventDefault();
           chooseUpgradeByIndex(0);
@@ -194,6 +225,16 @@ export default function GameScreen({ onReturnToMenu, setup }: GameScreenProps) {
       const deltaSeconds = (now - lastFrameRef.current) / 1000;
       lastFrameRef.current = now;
       updateGame(stateRef.current, inputRef.current, deltaSeconds);
+      audioRef.current?.syncBgm(getBgmTrackForState(stateRef.current));
+
+      const events = drainGameEvents(stateRef.current);
+      audioRef.current?.consumeEvents(events);
+      events.forEach((event) => {
+        if (event.type === "goldEggGain" && event.amount) {
+          awardGoldenEggsRef.current(event.amount);
+        }
+      });
+
       refresh();
       frameRef.current = window.requestAnimationFrame(frame);
     }
@@ -211,6 +252,8 @@ export default function GameScreen({ onReturnToMenu, setup }: GameScreenProps) {
       if (frameRef.current !== null) {
         window.cancelAnimationFrame(frameRef.current);
       }
+
+      audioRef.current?.dispose();
     };
   }, []);
 
@@ -244,11 +287,13 @@ export default function GameScreen({ onReturnToMenu, setup }: GameScreenProps) {
         aria-label="蟑螂幸存者游戏画面"
         role="img"
         onMouseEnter={(event) => {
+          audioRef.current?.unlock();
           updatePointerPosition(event.clientX, event.clientY);
           refresh();
         }}
         onMouseMove={(event) => updatePointerPosition(event.clientX, event.clientY)}
         onMouseDown={(event) => {
+          audioRef.current?.unlock();
           updatePointerPosition(event.clientX, event.clientY);
           refresh();
         }}
@@ -299,6 +344,10 @@ export default function GameScreen({ onReturnToMenu, setup }: GameScreenProps) {
           <div className="hud-pill">
             <span>难度</span>
             <strong>{difficultyText}</strong>
+          </div>
+          <div className="hud-pill">
+            <span>金色卵鞘</span>
+            <strong>{state.runGoldenEggsCollected}</strong>
           </div>
         </div>
 
@@ -377,6 +426,12 @@ export default function GameScreen({ onReturnToMenu, setup }: GameScreenProps) {
                 <p className="menu-eyebrow">LEVEL UP</p>
                 <h2>腺体突然暴走了</h2>
                 <p className="overlay-copy">选择一次变异强化。战斗会暂停，直到你完成选择。</p>
+                <div className="choice-toolbar">
+                  <span className="currency-pill">剩余刷新 {state.upgradeRefreshesRemaining}</span>
+                  <button className="button-secondary" type="button" onClick={rerollChoices} disabled={state.upgradeRefreshesRemaining <= 0}>
+                    刷新增益
+                  </button>
+                </div>
                 <div className="choice-grid">
                   {state.upgradeChoices.map((choice, index) => (
                     <button key={choice.id} className="choice-card" type="button" onClick={() => chooseUpgradeByIndex(index)}>

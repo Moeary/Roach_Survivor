@@ -14,6 +14,7 @@ import type {
   ObstacleType,
   OrbitalEntity,
   PickupEntity,
+  PickupType,
   PlayerEntity,
   ProjectileEntity,
   ProjectileVariant,
@@ -30,6 +31,11 @@ const WORLD_GENERATION_RADIUS = 2;
 const CONTACT_COOLDOWN = 0.62;
 const PLAYER_SAFE_RADIUS = 210;
 const OBSTACLE_PADDING = 8;
+const GOLD_EGG_DROP_CHANCES = {
+  nymph: 0.0001,
+  adult: 0.0002,
+  guard: 0.0003,
+} as const;
 
 
 function distance(aX: number, aY: number, bX: number, bY: number): number {
@@ -169,6 +175,19 @@ function ensureWorldAroundPlayer(state: GameState): void {
   }
 }
 
+function queueGameEvent(state: GameState, type: GameState["gameEvents"][number]["type"], amount?: number): void {
+  state.gameEvents.push({
+    id: state.nextGameEventId,
+    type,
+    amount,
+  });
+  state.nextGameEventId += 1;
+}
+
+export function drainGameEvents(state: GameState) {
+  return state.gameEvents.splice(0, state.gameEvents.length);
+}
+
 export function createInputState(): InputState {
   return {
     up: false,
@@ -214,7 +233,7 @@ export function createGameState(setup?: RunSetup): GameState {
     runDuration: difficulty.runDuration,
     runState: "running",
     timer: 0,
-    player: createPlayer(),
+    player: createPlayer(normalizedSetup.metaUpgrades),
     enemies: [],
     projectiles: [],
     orbitals: [],
@@ -230,11 +249,15 @@ export function createGameState(setup?: RunSetup): GameState {
     upgradeLevels: {},
     upgradesTaken: [],
     lastUpgradeName: "",
+    upgradeRefreshesRemaining: normalizedSetup.metaUpgrades.buffRefresh,
+    runGoldenEggsCollected: 0,
     bossSpawned: false,
     bossDefeated: false,
     bossWavesSpawned: 0,
     bossWavesDefeated: 0,
+    gameEvents: [],
     spawnTimer: 0.45,
+    nextGameEventId: 0,
     nextEnemyId: 0,
     nextProjectileId: 0,
     nextOrbitalId: 0,
@@ -338,23 +361,74 @@ function createEffect(
 
 function gainXp(state: GameState, amount: number): void {
   state.xp += amount;
+  queueGameEvent(state, "xpGain", amount);
 }
 
-function spawnPickup(state: GameState, x: number, y: number, value: number): void {
-  state.pickups.push({
-    id: "pickup-" + state.nextPickupId,
-    type: "xp",
+function collectGoldenEggs(state: GameState, amount: number, x: number, y: number): void {
+  state.runGoldenEggsCollected += amount;
+  queueGameEvent(state, "goldEggGain", amount);
+  createEffect(state, {
     x,
     y,
-    radius: 11 + value * 1.5,
+    radius: 18 + amount * 2.4,
+    tint: "#f7d872",
+    duration: 0.3,
+  });
+}
+
+function spawnPickup(state: GameState, x: number, y: number, value: number, type: PickupType = "xp"): void {
+  state.pickups.push({
+    id: "pickup-" + state.nextPickupId,
+    type,
+    x,
+    y,
+    radius: type === "goldEgg" ? 13 + Math.min(16, value * 1.1) : 11 + value * 1.5,
     value,
     alive: true,
   });
   state.nextPickupId += 1;
 }
 
+function getBossGoldenEggReward(state: GameState, bossWave: number): number {
+  if (bossWave === 1) {
+    return state.difficulty.id === "easy" ? 5 : state.difficulty.id === "normal" ? 7 : 9;
+  }
+
+  if (bossWave === 2) {
+    return state.difficulty.id === "normal" ? 10 : 13;
+  }
+
+  return 20;
+}
+
+function maybeDropGoldenEgg(state: GameState, enemy: EnemyEntity): void {
+  if (enemy.type === "boss") {
+    return;
+  }
+
+  const chance = GOLD_EGG_DROP_CHANCES[enemy.type];
+
+  if (!chance || Math.random() >= chance) {
+    return;
+  }
+
+  spawnPickup(state, enemy.x, enemy.y, 1, "goldEgg");
+}
+
+function autoCollectGoldenEggs(state: GameState): void {
+  state.pickups.forEach((pickup) => {
+    if (!pickup.alive || pickup.type !== "goldEgg") {
+      return;
+    }
+
+    pickup.alive = false;
+    collectGoldenEggs(state, pickup.value, pickup.x, pickup.y);
+  });
+}
+
 function defeatEnemy(state: GameState, enemy: EnemyEntity): void {
   enemy.alive = false;
+  queueGameEvent(state, "enemyDie");
   createEffect(state, {
     x: enemy.x,
     y: enemy.y,
@@ -366,10 +440,15 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity): void {
   if (enemy.type === "boss") {
     state.bossSpawned = false;
     state.bossWavesDefeated += 1;
+    const reward = getBossGoldenEggReward(state, state.bossWavesDefeated);
 
     if (state.bossWavesDefeated >= state.difficulty.bossWaves) {
+      collectGoldenEggs(state, reward, enemy.x, enemy.y);
       state.bossDefeated = true;
       state.runState = "won";
+      autoCollectGoldenEggs(state);
+    } else {
+      spawnPickup(state, enemy.x, enemy.y, reward, "goldEgg");
     }
 
     return;
@@ -385,6 +464,8 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity): void {
       Math.max(1, Math.round(enemy.xp / orbCount)),
     );
   }
+
+  maybeDropGoldenEgg(state, enemy);
 }
 
 function findSpawnPosition(state: GameState, radius: number, minDistance = 560, maxDistance = 760): { x: number; y: number } {
@@ -549,6 +630,7 @@ function updateEnemies(state: GameState, dt: number): void {
 
       player.hp = Math.max(0, player.hp - enemy.damage);
       player.contactTimer = CONTACT_COOLDOWN;
+      queueGameEvent(state, "playerHurt", enemy.damage);
       player.x += knockbackX;
       player.y += knockbackY;
       enemy.x -= knockbackX * 0.7;
@@ -680,6 +762,7 @@ function updateManualFire(state: GameState, input: InputState, dt: number): void
       tint: "#ecf4bf",
       duration: 0.18,
     });
+    queueGameEvent(state, "playerShot");
 
     player.attackTimer += player.stats.attackCooldown;
   }
@@ -722,6 +805,7 @@ function updateAutoTurrets(state: GameState, dt: number): void {
       tint: "#c8ff96",
       duration: 0.16,
     });
+    queueGameEvent(state, "playerShot");
 
     player.autoAttackTimer += player.stats.autoTurretCooldown;
   }
@@ -914,15 +998,23 @@ function updatePickups(state: GameState, dt: number): void {
     }
 
     if (orbDistance <= player.radius + pickup.radius) {
-      gainXp(state, pickup.value);
+      if (pickup.type === "xp") {
+        gainXp(state, pickup.value);
+      } else {
+        collectGoldenEggs(state, pickup.value, pickup.x, pickup.y);
+      }
+
       pickup.alive = false;
-      createEffect(state, {
-        x: pickup.x,
-        y: pickup.y,
-        radius: pickup.radius * 1.4,
-        tint: "#d7f06d",
-        duration: 0.24,
-      });
+
+      if (pickup.type === "xp") {
+        createEffect(state, {
+          x: pickup.x,
+          y: pickup.y,
+          radius: pickup.radius * 1.4,
+          tint: "#d7f06d",
+          duration: 0.24,
+        });
+      }
     }
   });
 }
@@ -946,7 +1038,31 @@ function checkLevelUp(state: GameState): void {
   state.level += 1;
   state.xpToNext = Math.floor(state.xpToNext * 1.24 + 4);
   state.upgradeChoices = pickUpgradeChoices(state, 3);
+  queueGameEvent(state, "levelUp");
   state.runState = "levelup";
+}
+
+export function refreshUpgradeChoices(state: GameState): boolean {
+  if (state.runState !== "levelup" || state.upgradeRefreshesRemaining <= 0) {
+    return false;
+  }
+
+  const currentIds = state.upgradeChoices.map((choice) => choice.id).sort().join("|");
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const nextChoices = pickUpgradeChoices(state, 3);
+    const nextIds = nextChoices.map((choice) => choice.id).sort().join("|");
+
+    state.upgradeChoices = nextChoices;
+
+    if (nextIds !== currentIds || attempt === 5) {
+      break;
+    }
+  }
+
+  state.upgradeRefreshesRemaining -= 1;
+  queueGameEvent(state, "buffReroll");
+  return true;
 }
 
 function cleanupEntities(state: GameState): void {
@@ -985,6 +1101,7 @@ export function updateGame(state: GameState, input: InputState, deltaSeconds: nu
   if (state.player.hp <= 0) {
     state.player.alive = false;
     state.runState = "lost";
+    autoCollectGoldenEggs(state);
   }
 
   if (state.runState === "running") {

@@ -159,7 +159,7 @@ select {
 
 .menu-config-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
   margin-top: 26px;
   max-width: 760px;
@@ -179,7 +179,8 @@ select {
 }
 
 .config-card span,
-.buff-card span {
+.buff-card span,
+.meta-card span {
   color: var(--lime);
   font-size: 0.78rem;
   letter-spacing: 0.14em;
@@ -187,7 +188,8 @@ select {
 }
 
 .config-card strong,
-.buff-card strong {
+.buff-card strong,
+.meta-card strong {
   font-size: 1rem;
 }
 
@@ -196,7 +198,8 @@ select {
 }
 
 .config-card p,
-.buff-card p {
+.buff-card p,
+.meta-card p {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
@@ -256,12 +259,33 @@ select {
   height: auto;
 }
 
+.menu-eyebrow-row {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
 .menu-eyebrow {
   margin: 0 0 12px;
   color: var(--lime);
   font-size: 0.84rem;
   letter-spacing: 0.24em;
   text-transform: uppercase;
+}
+
+.cheat-trigger {
+  position: absolute;
+  inset: 0 0 12px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.cheat-trigger:hover,
+.cheat-trigger:focus-visible {
+  outline: none;
+  background: rgba(214, 239, 109, 0.08);
 }
 
 .hero-panel h1,
@@ -340,6 +364,13 @@ select {
 .choice-card:focus-visible {
   transform: translateY(-2px);
   outline: none;
+}
+
+.button-primary:disabled,
+.button-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
 }
 
 .hero-tags {
@@ -446,6 +477,15 @@ select {
   margin-top: 22px;
 }
 
+.currency-pill {
+  padding: 8px 12px;
+  border: 1px solid rgba(214, 239, 109, 0.12);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .buff-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -453,7 +493,8 @@ select {
   margin-top: 20px;
 }
 
-.buff-card {
+.buff-card,
+.meta-card {
   display: grid;
   gap: 10px;
   padding: 18px;
@@ -463,7 +504,8 @@ select {
   transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, opacity 140ms ease;
 }
 
-.buff-card h3 {
+.buff-card h3,
+.meta-card h3 {
   margin: 0;
   font-size: 1.18rem;
   font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
@@ -471,7 +513,9 @@ select {
 }
 
 .buff-card:hover,
-.buff-card:focus-visible {
+.buff-card:focus-visible,
+.meta-card:hover,
+.meta-card:focus-visible {
   transform: translateY(-2px);
   outline: none;
   border-color: rgba(214, 239, 109, 0.24);
@@ -483,9 +527,36 @@ select {
     rgba(255, 255, 255, 0.03);
 }
 
-.buff-card:disabled {
+.buff-card:disabled,
+.meta-card:disabled {
   cursor: not-allowed;
   opacity: 0.9;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.meta-card {
+  border: 1px solid rgba(214, 239, 109, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.meta-card-active {
+  background:
+    linear-gradient(180deg, rgba(255, 212, 110, 0.08), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.03);
+}
+
+.meta-stat-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .tutorial-grid {
@@ -751,6 +822,14 @@ select {
   margin-top: 20px;
 }
 
+.choice-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 18px;
+}
+
 .choice-card {
   padding: 18px;
   border: 1px solid rgba(214, 239, 109, 0.18);
@@ -827,11 +906,17 @@ select {
 
   .tutorial-grid,
   .buff-grid,
+  .meta-grid,
   .choice-grid {
     grid-template-columns: 1fr;
   }
 
   .buff-modal-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .choice-toolbar {
     flex-direction: column;
     align-items: stretch;
   }

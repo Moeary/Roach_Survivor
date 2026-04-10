@@ -3,7 +3,10 @@ export type DifficultyId = "easy" | "normal" | "hard";
 export type EnemyTypeId = "nymph" | "adult" | "guard" | "boss";
 export type DecorationType = "puddle" | "crumb" | "cap" | "drain" | "stain";
 export type ObstacleType = "pipe" | "barrel" | "trash";
+export type PickupType = "xp" | "goldEgg";
 export type ProjectileVariant = "manual" | "auto";
+export type MetaUpgradeId = "baseDamage" | "baseMoveSpeed" | "baseMaxHp" | "buffRefresh";
+export type GameEventType = "playerShot" | "enemyDie" | "goldEggGain" | "playerHurt" | "xpGain" | "levelUp" | "buffReroll";
 export type UpgradeId =
   | "damage"
   | "attackSpeed"
@@ -106,7 +109,7 @@ export interface OrbitalEntity {
 
 export interface PickupEntity {
   id: string;
-  type: "xp";
+  type: PickupType;
   x: number;
   y: number;
   radius: number;
@@ -169,9 +172,28 @@ export interface DifficultyConfig {
   description: string;
 }
 
+export interface MetaUpgradeLevels {
+  baseDamage: number;
+  baseMoveSpeed: number;
+  baseMaxHp: number;
+  buffRefresh: number;
+}
+
+export interface MetaProfile {
+  goldenEggs: number;
+  metaUpgrades: MetaUpgradeLevels;
+}
+
+export interface GameEvent {
+  id: number;
+  type: GameEventType;
+  amount?: number;
+}
+
 export interface RunSetup {
   difficultyId: DifficultyId;
   enabledUpgrades: UpgradeId[];
+  metaUpgrades: MetaUpgradeLevels;
 }
 
 export interface EnemyTypeDefinition {
@@ -217,11 +239,15 @@ export interface GameState {
   upgradeLevels: Partial<Record<UpgradeId, number>>;
   upgradesTaken: UpgradeId[];
   lastUpgradeName: string;
+  upgradeRefreshesRemaining: number;
+  runGoldenEggsCollected: number;
   bossSpawned: boolean;
   bossDefeated: boolean;
   bossWavesSpawned: number;
   bossWavesDefeated: number;
+  gameEvents: GameEvent[];
   spawnTimer: number;
+  nextGameEventId: number;
   nextEnemyId: number;
   nextProjectileId: number;
   nextOrbitalId: number;
