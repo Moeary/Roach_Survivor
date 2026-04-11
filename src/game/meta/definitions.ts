@@ -137,6 +137,22 @@ export function getMetaUpgradeMaxLevel(upgradeId: MetaUpgradeId): number {
   return META_UPGRADE_MAP.get(upgradeId)?.maxLevel ?? 0;
 }
 
+export function getMetaUpgradeSpentCost(upgradeId: MetaUpgradeId, level: number): number {
+  let total = 0;
+
+  for (let currentLevel = 0; currentLevel < clampLevel(level); currentLevel += 1) {
+    total += getMetaUpgradeCost(upgradeId, currentLevel);
+  }
+
+  return Number.isFinite(total) ? total : 0;
+}
+
+export function getMetaResetRefund(profile: MetaProfile): number {
+  const normalized = normalizeMetaProfile(profile);
+
+  return META_UPGRADE_DEFS.reduce((total, upgrade) => total + getMetaUpgradeSpentCost(upgrade.id, normalized.metaUpgrades[upgrade.id]), 0);
+}
+
 export function addGoldenEggs(profile: MetaProfile, amount: number): MetaProfile {
   const normalized = normalizeMetaProfile(profile);
   return {
@@ -166,5 +182,19 @@ export function purchaseMetaUpgrade(profile: MetaProfile, upgradeId: MetaUpgrade
       ...normalized.metaUpgrades,
       [upgradeId]: currentLevel + 1,
     },
+  };
+}
+
+export function resetMetaUpgrades(profile: MetaProfile): MetaProfile | null {
+  const normalized = normalizeMetaProfile(profile);
+  const refund = getMetaResetRefund(normalized);
+
+  if (refund <= 0 || normalized.goldenEggs < 1) {
+    return null;
+  }
+
+  return {
+    goldenEggs: normalized.goldenEggs - 1 + refund,
+    metaUpgrades: { ...EMPTY_META_UPGRADES },
   };
 }

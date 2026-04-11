@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { GameAudioController } from "./audio/gameAudio";
 import BuffSetupModal from "./components/BuffSetupModal";
 import ChangelogModal from "./components/ChangelogModal";
 import GameScreen from "./components/GameScreen";
 import MetaUpgradeModal from "./components/MetaUpgradeModal";
 import StartScreen from "./components/StartScreen";
 import TutorialModal from "./components/TutorialModal";
-import { addGoldenEggs, loadMetaProfile, purchaseMetaUpgrade, saveMetaProfile } from "./game/meta";
+import { addGoldenEggs, loadMetaProfile, purchaseMetaUpgrade, resetMetaUpgrades, saveMetaProfile } from "./game/meta";
 import { ALL_UPGRADE_IDS, DEFAULT_RUN_SETUP } from "./game/run/config";
 import type { DifficultyId, MetaUpgradeId, UpgradeId } from "./game/types";
 
@@ -20,12 +21,43 @@ export default function App() {
   const [menuEnabledUpgrades, setMenuEnabledUpgrades] = useState<UpgradeId[]>(DEFAULT_RUN_SETUP.enabledUpgrades);
   const [runSetup, setRunSetup] = useState(DEFAULT_RUN_SETUP);
   const [runKey, setRunKey] = useState(0);
+  const [menuAudio] = useState(() => new GameAudioController());
 
   useEffect(() => {
     saveMetaProfile(profile);
   }, [profile]);
 
+  function playMenuCue(cueId: Parameters<typeof menuAudio.playCue>[0]) {
+    menuAudio.unlock();
+    menuAudio.playCue(cueId);
+  }
+
+  useEffect(() => {
+    if (screen === "menu") {
+      menuAudio.syncBgm("menu");
+    } else {
+      menuAudio.syncBgm(null);
+    }
+  }, [menuAudio, screen]);
+
+  useEffect(() => {
+    function unlockMenuAudio() {
+      menuAudio.unlock();
+    }
+
+    window.addEventListener("pointerdown", unlockMenuAudio);
+    window.addEventListener("keydown", unlockMenuAudio);
+
+    return () => {
+      window.removeEventListener("pointerdown", unlockMenuAudio);
+      window.removeEventListener("keydown", unlockMenuAudio);
+      menuAudio.dispose();
+    };
+  }, [menuAudio]);
+
   function startGame() {
+    playMenuCue("startGame");
+    menuAudio.syncBgm(null);
     setRunSetup({
       difficultyId: menuDifficultyId,
       enabledUpgrades: menuEnabledUpgrades,
@@ -54,7 +86,38 @@ export default function App() {
   }
 
   function upgradeMetaStat(upgradeId: MetaUpgradeId) {
-    setProfile((current) => purchaseMetaUpgrade(current, upgradeId) ?? current);
+    setProfile((current) => {
+      const next = purchaseMetaUpgrade(current, upgradeId);
+
+      if (next) {
+        playMenuCue("metaUpgrade");
+      }
+
+      return next ?? current;
+    });
+  }
+
+  function resetAllMetaUpgrades() {
+    setProfile((current) => {
+      const next = resetMetaUpgrades(current);
+
+      if (next) {
+        playMenuCue("metaReset");
+      }
+
+      return next ?? current;
+    });
+  }
+
+  function selectDifficulty(nextDifficultyId: DifficultyId) {
+    setMenuDifficultyId((current) => {
+      if (current !== nextDifficultyId) {
+        playMenuCue("difficultySelect");
+        return nextDifficultyId;
+      }
+
+      return current;
+    });
   }
 
   return (
@@ -66,12 +129,12 @@ export default function App() {
             enabledBuffCount={menuEnabledUpgrades.length}
             goldenEggs={profile.goldenEggs}
             totalBuffCount={ALL_UPGRADE_IDS.length}
-            onOpenBuffSetup={() => setBuffSetupOpen(true)}
-            onOpenChangelog={() => setChangelogOpen(true)}
-            onOpenMetaUpgrade={() => setMetaUpgradeOpen(true)}
-            onOpenTutorial={() => setTutorialOpen(true)}
-            onCheatGoldenEggs={() => awardGoldenEggs(100)}
-            onSelectDifficulty={setMenuDifficultyId}
+            onOpenBuffSetup={() => { playMenuCue("uiOpen"); setBuffSetupOpen(true); }}
+            onOpenChangelog={() => { playMenuCue("uiOpen"); setChangelogOpen(true); }}
+            onOpenMetaUpgrade={() => { playMenuCue("uiOpen"); setMetaUpgradeOpen(true); }}
+            onOpenTutorial={() => { playMenuCue("uiOpen"); setTutorialOpen(true); }}
+            onCheatGoldenEggs={() => { playMenuCue("cheat"); awardGoldenEggs(100); }}
+            onSelectDifficulty={selectDifficulty}
             onStart={startGame}
           />
           <BuffSetupModal
@@ -88,6 +151,7 @@ export default function App() {
             metaUpgrades={profile.metaUpgrades}
             onClose={() => setMetaUpgradeOpen(false)}
             onPurchase={upgradeMetaStat}
+            onReset={resetAllMetaUpgrades}
           />
           <TutorialModal isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} />
         </>

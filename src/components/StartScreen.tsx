@@ -112,7 +112,7 @@ export default function StartScreen({
           </div>
           <div>
             <span>当前版本</span>
-            <strong>v0.5 Meta Progression & Audio</strong>
+            <strong>v0.5</strong>
           </div>
         </section>
       </section>

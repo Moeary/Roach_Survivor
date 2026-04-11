@@ -121,6 +121,28 @@ export default function GameScreen({ onAwardGoldenEggs, onReturnToMenu, setup }:
     return didRefresh;
   }
 
+  function fastForwardToNextBossPrep() {
+    const state = stateRef.current;
+
+    if (state.runState !== "running" || state.bossSpawned || state.bossWavesSpawned >= state.difficulty.bossWaves) {
+      return false;
+    }
+
+    const bossInterval = state.runDuration / state.difficulty.bossWaves;
+    const nextBossTime = bossInterval * (state.bossWavesSpawned + 1);
+    const targetTime = Math.max(0, nextBossTime - 5);
+
+    if (state.timer >= targetTime) {
+      return false;
+    }
+
+    audioRef.current?.unlock();
+    audioRef.current?.playCue("cheat");
+    state.timer = targetTime;
+    refresh();
+    return true;
+  }
+
   function updatePointerPosition(clientX: number, clientY: number) {
     const svg = svgRef.current;
 
@@ -266,6 +288,9 @@ export default function GameScreen({ onAwardGoldenEggs, onReturnToMenu, setup }:
   const summary = summarizeUpgrades(state);
   const healthRatio = clamp(state.player.hp / state.player.maxHp, 0, 1);
   const xpRatio = clamp(state.xp / state.xpToNext, 0, 1);
+  const nextBossTime = (state.runDuration / state.difficulty.bossWaves) * (state.bossWavesSpawned + 1);
+  const fastForwardTarget = Math.max(0, nextBossTime - 5);
+  const canFastForward = state.runState === "running" && !state.bossSpawned && state.bossWavesSpawned < state.difficulty.bossWaves && state.timer < fastForwardTarget;
   const targetText = `存活 ${formatTime(state.runDuration)} 并击败 ${state.difficulty.bossWaves} 波 Boss`;
   const difficultyText = `${state.difficulty.label} / ${state.difficulty.bossWaves} 波 Boss`;
   const bossTitle = `母巢女王 第 ${state.bossWavesSpawned} 波`;
@@ -352,7 +377,16 @@ export default function GameScreen({ onAwardGoldenEggs, onReturnToMenu, setup }:
         </div>
 
         <div className="hud-target">
-          <span>目标</span>
+          <button
+            className="hud-target-trigger"
+            type="button"
+            onClick={fastForwardToNextBossPrep}
+            disabled={!canFastForward}
+            title={canFastForward ? `作弊：快进到 ${formatTime(fastForwardTarget)}` : "当前不可快进"}
+            aria-label={canFastForward ? `作弊：快进到 ${formatTime(fastForwardTarget)}` : "当前不可快进"}
+          >
+            目标
+          </button>
           <strong>{targetText}</strong>
           <em>Esc 释放瞄准 / P 暂停</em>
         </div>

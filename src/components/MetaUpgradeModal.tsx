@@ -1,4 +1,4 @@
-import { getMetaUpgradeBonusLabel, getMetaUpgradeCost, getMetaUpgradeMaxLevel, META_UPGRADE_DEFS } from "../game/meta";
+import { getMetaUpgradeBonusLabel, getMetaUpgradeCost, getMetaUpgradeMaxLevel, getMetaResetRefund, META_UPGRADE_DEFS } from "../game/meta";
 import type { MetaUpgradeId, MetaUpgradeLevels } from "../game/types";
 
 interface MetaUpgradeModalProps {
@@ -7,6 +7,7 @@ interface MetaUpgradeModalProps {
   metaUpgrades: MetaUpgradeLevels;
   onClose: () => void;
   onPurchase: (upgradeId: MetaUpgradeId) => void;
+  onReset: () => void;
 }
 
 export default function MetaUpgradeModal({
@@ -15,10 +16,17 @@ export default function MetaUpgradeModal({
   metaUpgrades,
   onClose,
   onPurchase,
+  onReset,
 }: MetaUpgradeModalProps) {
   if (!isOpen) {
     return null;
   }
+
+  const refund = getMetaResetRefund({
+    goldenEggs,
+    metaUpgrades,
+  });
+  const canReset = refund > 0 && goldenEggs >= 1;
 
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
@@ -35,7 +43,12 @@ export default function MetaUpgradeModal({
 
         <div className="buff-modal-head">
           <strong>当前库存 {goldenEggs} 枚金色卵鞘</strong>
-          <span className="currency-pill">Cookie 已启用持久化</span>
+          <div className="modal-inline-actions">
+            <span className="currency-pill">Cookie 已启用持久化</span>
+            <button className="button-secondary" type="button" onClick={onReset} disabled={!canReset}>
+              重置升级 返还 {refund} - 1
+            </button>
+          </div>
         </div>
 
         <div className="meta-grid">
