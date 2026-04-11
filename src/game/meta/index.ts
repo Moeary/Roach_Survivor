@@ -6,9 +6,12 @@ export {
   getMetaUpgradeBonusLabel,
   getMetaUpgradeCost,
   getMetaUpgradeMaxLevel,
+  getMetaResetRefund,
+  getMetaUpgradeSpentCost,
   META_UPGRADE_DEFS,
   normalizeMetaProfile,
   normalizeMetaUpgrades,
   purchaseMetaUpgrade,
+  resetMetaUpgrades,
 } from "./definitions";
 export { loadMetaProfile, saveMetaProfile } from "./storage";

@@ -12,3 +12,5 @@ Thumbs.db
 .idea/
 
 docs/*
+public/audio/**/*.mp3
+public/audio/README.md

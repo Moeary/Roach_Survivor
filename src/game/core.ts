@@ -1078,11 +1078,17 @@ export function updateGame(state: GameState, input: InputState, deltaSeconds: nu
   }
 
   const dt = Math.min(0.05, deltaSeconds);
-  state.timer += dt;
+  const bossInterval = getBossWaveInterval(state);
+
+  if (state.bossSpawned) {
+    state.timer = Math.min(state.runDuration, bossInterval * state.bossWavesSpawned);
+  } else {
+    state.timer = Math.min(state.runDuration, state.timer + dt);
+  }
 
   ensureWorldAroundPlayer(state);
 
-  if (state.timer >= getBossWaveInterval(state) * (state.bossWavesSpawned + 1)) {
+  if (state.timer >= bossInterval * (state.bossWavesSpawned + 1)) {
     spawnBoss(state);
   }
 

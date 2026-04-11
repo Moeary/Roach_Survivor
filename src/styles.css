@@ -477,6 +477,13 @@ select {
   margin-top: 22px;
 }
 
+.modal-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .currency-pill {
   padding: 8px 12px;
   border: 1px solid rgba(214, 239, 109, 0.12);
@@ -709,7 +716,6 @@ select {
 }
 
 .hud-pill span,
-.hud-target span,
 .hud-card span,
 .boss-bar-head span {
   display: block;
@@ -728,6 +734,31 @@ select {
 
 .hud-target {
   text-align: right;
+}
+
+.hud-target-trigger {
+  display: block;
+  margin: 0 0 6px auto;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: transparent;
+}
+
+.hud-target-trigger:hover,
+.hud-target-trigger:focus-visible {
+  outline: none;
+  color: var(--lime);
+}
+
+.hud-target-trigger:disabled {
+  cursor: default;
+  color: var(--muted);
+  opacity: 0.88;
 }
 
 .hud-target em {
@@ -914,6 +945,10 @@ select {
   .buff-modal-head {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .modal-inline-actions {
+    justify-content: stretch;
   }
 
   .choice-toolbar {
