@@ -1,6 +1,12 @@
 import type { GameEvent, GameState } from "../game/types";
 
 export type BgmTrackId = "menu" | "victory" | "wave1" | "boss1" | "wave2" | "boss2" | "wave3" | "boss3";
+export interface AudioSettings {
+  masterVolume: number;
+  bgmVolume: number;
+  sfxVolume: number;
+}
+
 export type AudioCueId =
   | "playerShot"
   | "enemyDie"
@@ -76,7 +82,56 @@ const SFX_INTERVAL_MS: Record<AudioCueId, number> = {
 };
 
 const AUDIO_TEMPLATE_CACHE = new Map<string, HTMLAudioElement>();
+const AUDIO_SETTINGS_STORAGE_KEY = "cockroach-survivor-audio-settings";
 let audioWarmupScheduled = false;
+
+export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
+  masterVolume: 1,
+  bgmVolume: 1,
+  sfxVolume: 1,
+};
+
+function clampVolume(value: number): number {
+  return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 1));
+}
+
+export function normalizeAudioSettings(settings?: Partial<AudioSettings>): AudioSettings {
+  return {
+    masterVolume: clampVolume(settings?.masterVolume ?? DEFAULT_AUDIO_SETTINGS.masterVolume),
+    bgmVolume: clampVolume(settings?.bgmVolume ?? DEFAULT_AUDIO_SETTINGS.bgmVolume),
+    sfxVolume: clampVolume(settings?.sfxVolume ?? DEFAULT_AUDIO_SETTINGS.sfxVolume),
+  };
+}
+
+export function loadAudioSettings(): AudioSettings {
+  if (typeof window === "undefined") {
+    return DEFAULT_AUDIO_SETTINGS;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(AUDIO_SETTINGS_STORAGE_KEY);
+
+    if (!raw) {
+      return DEFAULT_AUDIO_SETTINGS;
+    }
+
+    return normalizeAudioSettings(JSON.parse(raw) as Partial<AudioSettings>);
+  } catch {
+    return DEFAULT_AUDIO_SETTINGS;
+  }
+}
+
+export function saveAudioSettings(settings: AudioSettings): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(AUDIO_SETTINGS_STORAGE_KEY, JSON.stringify(normalizeAudioSettings(settings)));
+  } catch {
+    // Ignore storage failures and keep in-memory settings only.
+  }
+}
 
 function getAudioTemplate(path: string): HTMLAudioElement {
   let audio = AUDIO_TEMPLATE_CACHE.get(path);
@@ -166,9 +221,11 @@ export class GameAudioController {
   private unavailableSfx = new Set<AudioCueId>();
   private unlocked = false;
   private lastSfxAt: Partial<Record<AudioCueId, number>> = {};
+  private settings: AudioSettings;
 
-  constructor() {
+  constructor(initialSettings?: Partial<AudioSettings>) {
     scheduleAudioWarmup();
+    this.settings = normalizeAudioSettings(initialSettings);
   }
 
   unlock() {
@@ -177,6 +234,29 @@ export class GameAudioController {
     if (this.bgm && this.bgm.paused) {
       void this.bgm.play().catch(() => undefined);
     }
+  }
+
+  setSettings(nextSettings: Partial<AudioSettings>) {
+    this.settings = normalizeAudioSettings({
+      ...this.settings,
+      ...nextSettings,
+    });
+    this.applyBgmVolume();
+  }
+
+  previewBgm(trackId: BgmTrackId = "menu") {
+    this.unlock();
+    this.syncBgm(trackId);
+
+    if (this.bgm) {
+      this.bgm.currentTime = 0;
+      void this.bgm.play().catch(() => undefined);
+    }
+  }
+
+  previewCue(cueId: AudioCueId) {
+    this.unlock();
+    this.playSfx(cueId, true);
   }
 
   syncBgm(trackId: BgmTrackId | null) {
@@ -222,7 +302,7 @@ export class GameAudioController {
     const requestedTrack = trackId;
     const audio = createPlayableAudio(nextSource);
     audio.loop = true;
-    audio.volume = 0.34;
+    audio.volume = this.getBgmVolume();
     audio.addEventListener("error", () => {
       this.unavailableBgm.add(nextSource);
 
@@ -240,6 +320,22 @@ export class GameAudioController {
     if (this.unlocked) {
       void audio.play().catch(() => undefined);
     }
+  }
+
+  private getBgmVolume(): number {
+    return 0.34 * this.settings.masterVolume * this.settings.bgmVolume;
+  }
+
+  private getSfxVolume(trackId: AudioCueId): number {
+    return SFX_VOLUME[trackId] * this.settings.masterVolume * this.settings.sfxVolume;
+  }
+
+  private applyBgmVolume() {
+    if (!this.bgm) {
+      return;
+    }
+
+    this.bgm.volume = this.getBgmVolume();
   }
 
   private resolveBgmSource(trackId: BgmTrackId | null): string | null {
@@ -287,7 +383,7 @@ export class GameAudioController {
     this.bgmSourcePath = null;
   }
 
-  private playSfx(trackId: AudioCueId) {
+  private playSfx(trackId: AudioCueId, force = false) {
     if (!this.unlocked || this.unavailableSfx.has(trackId)) {
       return;
     }
@@ -295,14 +391,14 @@ export class GameAudioController {
     const now = performance.now();
     const minInterval = SFX_INTERVAL_MS[trackId];
 
-    if (this.lastSfxAt[trackId] && now - this.lastSfxAt[trackId]! < minInterval) {
+    if (!force && this.lastSfxAt[trackId] && now - this.lastSfxAt[trackId]! < minInterval) {
       return;
     }
 
     this.lastSfxAt[trackId] = now;
 
     const audio = createPlayableAudio(SFX_TRACKS[trackId]);
-    audio.volume = SFX_VOLUME[trackId];
+    audio.volume = this.getSfxVolume(trackId);
     audio.addEventListener("error", () => {
       this.unavailableSfx.add(trackId);
     });

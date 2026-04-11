@@ -1,4 +1,5 @@
 import { DIFFICULTY_ORDER, getDifficultyConfig } from "../game/run/config";
+import { CURRENT_VERSION } from "../content/version";
 import type { DifficultyId } from "../game/types";
 import { RoachLogo } from "./sprites/player/RoachMascot";
 
@@ -9,8 +10,10 @@ interface StartScreenProps {
   totalBuffCount: number;
   onOpenBuffSetup: () => void;
   onOpenChangelog: () => void;
+  onOpenCompendium: () => void;
   onOpenMetaUpgrade: () => void;
   onOpenTutorial: () => void;
+  onOpenVolumeSettings: () => void;
   onCheatGoldenEggs: () => void;
   onSelectDifficulty: (difficultyId: DifficultyId) => void;
   onStart: () => void;
@@ -23,8 +26,10 @@ export default function StartScreen({
   totalBuffCount,
   onOpenBuffSetup,
   onOpenChangelog,
+  onOpenCompendium,
   onOpenMetaUpgrade,
   onOpenTutorial,
+  onOpenVolumeSettings,
   onCheatGoldenEggs,
   onSelectDifficulty,
   onStart,
@@ -50,8 +55,14 @@ export default function StartScreen({
               <button className="button-secondary" type="button" onClick={onOpenTutorial}>
                 查看教程
               </button>
+              <button className="button-secondary" type="button" onClick={onOpenVolumeSettings}>
+                音量调整
+              </button>
               <button className="button-secondary" type="button" onClick={onOpenChangelog}>
                 版本更新日志
+              </button>
+              <button className="button-secondary" type="button" onClick={onOpenCompendium}>
+                怪物图鉴
               </button>
             </div>
 
@@ -90,7 +101,7 @@ export default function StartScreen({
               <section className="config-card">
                 <span>局外成长</span>
                 <strong>{goldenEggs} 枚金色卵鞘</strong>
-                <p>可用来强化主角开局攻击、速度和血量。数据会通过 Cookie 保存在本地。</p>
+                <p>可用来强化主角开局攻击、速度和血量。进度会自动保存在本地。</p>
                 <button className="button-secondary" type="button" onClick={onOpenMetaUpgrade}>
                   外部升级
                 </button>
@@ -112,7 +123,7 @@ export default function StartScreen({
           </div>
           <div>
             <span>当前版本</span>
-            <strong>v0.5</strong>
+            <strong>{CURRENT_VERSION}</strong>
           </div>
         </section>
       </section>

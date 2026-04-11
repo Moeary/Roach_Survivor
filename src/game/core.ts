@@ -5,6 +5,7 @@ import { getDifficultyConfig, normalizeRunSetup } from "./run/config";
 import type {
   Decoration,
   DecorationType,
+  DifficultyId,
   EffectEntity,
   EnemyEntity,
   EnemyTypeId,
@@ -31,11 +32,71 @@ const WORLD_GENERATION_RADIUS = 2;
 const CONTACT_COOLDOWN = 0.62;
 const PLAYER_SAFE_RADIUS = 210;
 const OBSTACLE_PADDING = 8;
-const GOLD_EGG_DROP_CHANCES = {
-  nymph: 0.0001,
-  adult: 0.0002,
-  guard: 0.0003,
-} as const;
+
+export type BossWaveConfig = {
+  name: string;
+  hp: Partial<Record<DifficultyId, number>>;
+  damage: Partial<Record<DifficultyId, number>>;
+  speed: Partial<Record<DifficultyId, number>>;
+  radius: number;
+  summonCooldown?: number;
+  summonBurst?: number;
+  summonPool?: EnemyTypeId[];
+};
+
+export const BOSS_WAVE_CONFIGS: Record<number, BossWaveConfig> = {
+  1: {
+    name: "母巢女王",
+    hp: {
+      easy: 1800,
+      normal: 2700,
+      hard: 3600,
+    },
+    damage: {
+      easy: 24,
+      normal: 34,
+      hard: 44,
+    },
+    speed: {
+      easy: 62,
+      normal: 76,
+      hard: 90,
+    },
+    radius: 72,
+  },
+  2: {
+    name: "裂足暴君",
+    hp: {
+      normal: 5200,
+      hard: 6800,
+    },
+    damage: {
+      normal: 40,
+      hard: 54,
+    },
+    speed: {
+      normal: 166,
+      hard: 192,
+    },
+    radius: 78,
+  },
+  3: {
+    name: "终焉孵化母巢",
+    hp: {
+      hard: 15000,
+    },
+    damage: {
+      hard: 68,
+    },
+    speed: {
+      hard: 116,
+    },
+    radius: 90,
+    summonCooldown: 7.5,
+    summonBurst: 4,
+    summonPool: ["razor", "phantom", "carrier", "behemoth"],
+  },
+};
 
 
 function distance(aX: number, aY: number, bX: number, bY: number): number {
@@ -49,6 +110,14 @@ function normalize(x: number, y: number): { x: number; y: number } {
 
 function randomRange(min: number, max: number): number {
   return min + Math.random() * (max - min);
+}
+
+function resolveDifficultyValue(values: Partial<Record<DifficultyId, number>>, difficultyId: DifficultyId): number {
+  return values[difficultyId] ?? values.hard ?? values.normal ?? values.easy ?? 0;
+}
+
+function getBossWaveConfig(bossWave: number): BossWaveConfig {
+  return BOSS_WAVE_CONFIGS[bossWave] ?? BOSS_WAVE_CONFIGS[1]!;
 }
 
 function getChunkCoord(value: number): number {
@@ -406,7 +475,7 @@ function maybeDropGoldenEgg(state: GameState, enemy: EnemyEntity): void {
     return;
   }
 
-  const chance = GOLD_EGG_DROP_CHANCES[enemy.type];
+  const chance = state.difficulty.goldenEggDropChance;
 
   if (!chance || Math.random() >= chance) {
     return;
@@ -454,7 +523,7 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity): void {
     return;
   }
 
-  const orbCount = enemy.type === "guard" ? 2 : 1;
+  const orbCount = enemy.xp >= 8 ? 3 : enemy.xp >= 4 ? 2 : 1;
 
   for (let index = 0; index < orbCount; index += 1) {
     spawnPickup(
@@ -468,20 +537,31 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity): void {
   maybeDropGoldenEgg(state, enemy);
 }
 
-function findSpawnPosition(state: GameState, radius: number, minDistance = 560, maxDistance = 760): { x: number; y: number } {
+function findSpawnPositionAroundPoint(
+  state: GameState,
+  originX: number,
+  originY: number,
+  radius: number,
+  minDistance = 560,
+  maxDistance = 760,
+): { x: number; y: number } {
   const { player } = state;
 
   for (let attempt = 0; attempt < 18; attempt += 1) {
     const angle = randomRange(0, Math.PI * 2);
     const length = randomRange(minDistance, maxDistance);
-    const x = player.x + Math.cos(angle) * length;
-    const y = player.y + Math.sin(angle) * length;
+    const x = originX + Math.cos(angle) * length;
+    const y = originY + Math.sin(angle) * length;
 
-    if (distance(x, y, player.x, player.y) < minDistance * 0.72) {
+    if (distance(x, y, originX, originY) < minDistance * 0.72) {
       continue;
     }
 
     if (isObstacleBlocking(state, x, y, radius, 18)) {
+      continue;
+    }
+
+    if (distance(x, y, player.x, player.y) < player.radius + radius + 28) {
       continue;
     }
 
@@ -490,36 +570,112 @@ function findSpawnPosition(state: GameState, radius: number, minDistance = 560, 
 
   const fallbackDirection = normalize(randomRange(-1, 1), randomRange(-1, 1));
   return {
-    x: player.x + fallbackDirection.x * minDistance,
-    y: player.y + fallbackDirection.y * minDistance,
+    x: originX + fallbackDirection.x * minDistance,
+    y: originY + fallbackDirection.y * minDistance,
   };
+}
+
+function findSpawnPosition(state: GameState, radius: number, minDistance = 560, maxDistance = 760): { x: number; y: number } {
+  return findSpawnPositionAroundPoint(state, state.player.x, state.player.y, radius, minDistance, maxDistance);
 }
 
 function spawnEnemy(state: GameState, enemyTypeId: EnemyTypeId, position?: { x: number; y: number }): EnemyEntity {
   const template = ENEMY_TYPES[enemyTypeId];
   const spawnPoint = position ?? findSpawnPosition(state, template.radius);
+  const hp = Math.max(1, Math.round(template.hp * state.difficulty.hpMultiplier));
+  const damage = Math.max(1, Math.round(template.damage * state.difficulty.damageMultiplier));
+  const speed = template.speed * state.difficulty.speedMultiplier;
   const enemy: EnemyEntity = {
     id: "enemy-" + state.nextEnemyId,
     type: template.id,
+    name: template.name,
     x: spawnPoint.x,
     y: spawnPoint.y,
     vx: 0,
     vy: 0,
     radius: template.radius,
-    hp: template.hp,
-    maxHp: template.hp,
-    speed: template.speed,
-    damage: template.damage,
+    hp,
+    maxHp: hp,
+    speed,
+    damage,
     xp: template.xp,
     tint: template.tint,
     alive: true,
     pulse: randomRange(0, Math.PI * 2),
+    bossWave: template.id === "boss" ? 1 : undefined,
+    summonCooldown: undefined,
+    summonTimer: undefined,
+    summonBurst: undefined,
+    summonPool: undefined,
   };
 
   resolveAgainstObstacles(state, enemy, 10);
   state.nextEnemyId += 1;
   state.enemies.push(enemy);
   return enemy;
+}
+
+function applyBossWaveConfig(state: GameState, boss: EnemyEntity, bossWave: number): void {
+  const config = getBossWaveConfig(bossWave);
+
+  boss.name = config.name;
+  boss.bossWave = bossWave;
+  boss.maxHp = resolveDifficultyValue(config.hp, state.difficulty.id);
+  boss.hp = boss.maxHp;
+  boss.damage = resolveDifficultyValue(config.damage, state.difficulty.id);
+  boss.speed = resolveDifficultyValue(config.speed, state.difficulty.id);
+  boss.radius = config.radius;
+  boss.summonCooldown = config.summonCooldown;
+  boss.summonTimer = config.summonCooldown;
+  boss.summonBurst = config.summonBurst;
+  boss.summonPool = config.summonPool ? [...config.summonPool] : undefined;
+  resolveAgainstObstacles(state, boss, 12);
+}
+
+function summonBossMinions(state: GameState, boss: EnemyEntity): void {
+  if (!boss.summonCooldown || !boss.summonBurst || !boss.summonPool?.length) {
+    return;
+  }
+
+  const livingEnemies = state.enemies.reduce((count, enemy) => count + (enemy.alive ? 1 : 0), 0);
+  const summonCount = Math.min(boss.summonBurst, Math.max(0, 118 - livingEnemies));
+
+  if (summonCount <= 0) {
+    boss.summonTimer = boss.summonCooldown;
+    return;
+  }
+
+  for (let index = 0; index < summonCount; index += 1) {
+    const enemyType = boss.summonPool[Math.floor(Math.random() * boss.summonPool.length)]!;
+    const position = findSpawnPositionAroundPoint(
+      state,
+      boss.x,
+      boss.y,
+      ENEMY_TYPES[enemyType].radius,
+      boss.radius + 28,
+      boss.radius + 118,
+    );
+    const minion = spawnEnemy(state, enemyType, position);
+    minion.pulse = randomRange(0, Math.PI * 2);
+
+    createEffect(state, {
+      x: minion.x,
+      y: minion.y,
+      radius: minion.radius * 1.2,
+      tint: "#f28b6b",
+      duration: 0.28,
+    });
+  }
+
+  createEffect(state, {
+    x: boss.x,
+    y: boss.y,
+    radius: boss.radius * 1.7,
+    tint: "#b63d4f",
+    duration: 0.38,
+  });
+
+  boss.summonTimer = boss.summonCooldown * (boss.hp / boss.maxHp <= 0.45 ? 0.72 : 1);
 }
 
 
@@ -529,21 +685,17 @@ function spawnBoss(state: GameState): void {
   }
 
   const bossWave = state.bossWavesSpawned + 1;
+  const bossConfig = getBossWaveConfig(bossWave);
   state.bossSpawned = true;
-  const position = findSpawnPosition(state, ENEMY_TYPES.boss.radius, 720, 860);
+  const position = findSpawnPosition(state, bossConfig.radius, 720, 860);
   const boss = spawnEnemy(state, "boss", position);
-  const waveMultiplier = 1 + (bossWave - 1) * 0.35;
-  boss.maxHp = Math.round(boss.maxHp * waveMultiplier);
-  boss.hp = boss.maxHp;
-  boss.damage = Math.round(boss.damage * (1 + (bossWave - 1) * 0.18));
-  boss.speed *= 1 + (bossWave - 1) * 0.06;
-  boss.radius += (bossWave - 1) * 4;
+  applyBossWaveConfig(state, boss, bossWave);
   state.bossWavesSpawned = bossWave;
   createEffect(state, {
     x: position.x,
     y: position.y,
-    radius: 160,
-    tint: "#f04d5d",
+    radius: boss.radius * 2.2,
+    tint: bossWave === 3 ? "#c93655" : bossWave === 2 ? "#ff7a4d" : "#f04d5d",
     duration: 0.82,
   });
 }
@@ -611,6 +763,14 @@ function updateEnemies(state: GameState, dt: number): void {
   state.enemies.forEach((enemy) => {
     if (!enemy.alive) {
       return;
+    }
+
+    if (enemy.type === "boss" && enemy.summonTimer !== undefined) {
+      enemy.summonTimer -= dt;
+
+      if (enemy.summonTimer <= 0) {
+        summonBossMinions(state, enemy);
+      }
     }
 
     const direction = normalize(player.x - enemy.x, player.y - enemy.y);

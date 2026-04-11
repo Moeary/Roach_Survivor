@@ -7,6 +7,29 @@ export interface ChangelogEntry {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "v0.6 UI, Audio & Bestiary",
+    date: "2026-04-11",
+    summary: "主页补上音量面板、怪物图鉴和更顺手的菜单排版。",
+    items: [
+      "主页新增音量调整，可分别控制全体、BGM 和 SFX 音量，并提供试听反馈。",
+      "主页新增怪物图鉴，直接展示当前 SVG 敌人形象和各难度下实际生效的血量、伤害、速度。",
+      "难度按钮改成三列等宽，困难不会再掉到下一行。",
+      "局外升级面板改成一行四列桌面布局，并移除 Cookie 已启用持久化提示。",
+      "主页当前版本号更新为 v0.6。",
+    ],
+  },
+  {
+    version: "v0.5 Enemy Surge Refresh",
+    date: "2026-04-11",
+    summary: "扩充敌人梯度、重做高波次 Boss，并统一难度成长参数。",
+    items: [
+      "普通怪的金色卵鞘掉率改成按难度统一配置，当前三档先统一为 0.2%。",
+      "敌人池扩展为 10 种：0-5 分钟保持 3 种，5-10 分钟新增 3 种，10-15 分钟再新增 4 种。",
+      "普通难度怪物生命和伤害为 1.5 倍、速度 1.2 倍；困难难度生命和伤害为 2 倍、速度 1.4 倍。",
+      "第二波 Boss 改为高速突进型，第三波 Boss 改为高血量召唤型最终 Boss。",
+    ],
+  },
+  {
     version: "v0.5 Meta Progression & Audio",
     date: "2026-04-09",
     summary: "加入金色卵鞘收集、局外成长和分阶段音频入口。",

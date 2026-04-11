@@ -14,7 +14,7 @@ import {
   togglePause,
   updateGame,
 } from "../game/core";
-import { GameAudioController, getBgmTrackForState } from "../audio/gameAudio";
+import { GameAudioController, getBgmTrackForState, type AudioSettings } from "../audio/gameAudio";
 import { summarizeUpgrades } from "../game/upgrades";
 import type { GameState, InputState, RunSetup } from "../game/types";
 import EnemySprite from "./sprites/enemies/EnemySprite";
@@ -28,6 +28,7 @@ import ProjectileSprite from "./sprites/world/ProjectileSprite";
 import WorldDefs from "./sprites/world/WorldDefs";
 
 interface GameScreenProps {
+  audioSettings: AudioSettings;
   onAwardGoldenEggs: (amount: number) => void;
   onReturnToMenu: () => void;
   setup: RunSetup;
@@ -70,7 +71,7 @@ function AimReticle({ state, input }: { state: GameState; input: InputState }) {
   );
 }
 
-export default function GameScreen({ onAwardGoldenEggs, onReturnToMenu, setup }: GameScreenProps) {
+export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnToMenu, setup }: GameScreenProps) {
   const stateRef = useRef<GameState>(createGameState(setup));
   const inputRef = useRef<InputState>(createInputState());
   const frameRef = useRef<number | null>(null);
@@ -81,7 +82,7 @@ export default function GameScreen({ onAwardGoldenEggs, onReturnToMenu, setup }:
   const [, forceRender] = useState(0);
 
   if (!audioRef.current) {
-    audioRef.current = new GameAudioController();
+    audioRef.current = new GameAudioController(audioSettings);
   }
 
   function refresh() {
@@ -162,6 +163,10 @@ export default function GameScreen({ onAwardGoldenEggs, onReturnToMenu, setup }:
   useEffect(() => {
     awardGoldenEggsRef.current = onAwardGoldenEggs;
   }, [onAwardGoldenEggs]);
+
+  useEffect(() => {
+    audioRef.current?.setSettings(audioSettings);
+  }, [audioSettings]);
 
   useEffect(() => {
     function setDirection(code: string, pressed: boolean) {
@@ -293,7 +298,7 @@ export default function GameScreen({ onAwardGoldenEggs, onReturnToMenu, setup }:
   const canFastForward = state.runState === "running" && !state.bossSpawned && state.bossWavesSpawned < state.difficulty.bossWaves && state.timer < fastForwardTarget;
   const targetText = `存活 ${formatTime(state.runDuration)} 并击败 ${state.difficulty.bossWaves} 波 Boss`;
   const difficultyText = `${state.difficulty.label} / ${state.difficulty.bossWaves} 波 Boss`;
-  const bossTitle = `母巢女王 第 ${state.bossWavesSpawned} 波`;
+  const bossTitle = boss ? `${boss.name} 第 ${boss.bossWave ?? state.bossWavesSpawned} 波` : "";
   const visibleDecorations = state.decorations.filter((decoration) => isVisible(decoration.x, decoration.y, 88, state, 340));
   const visibleObstacles = state.obstacles.filter((obstacle) => isVisible(obstacle.x, obstacle.y, obstacle.radius * 1.4, state, 340));
   const visiblePickups = state.pickups.filter((pickup) => isVisible(pickup.x, pickup.y, pickup.radius, state));

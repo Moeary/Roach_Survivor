@@ -1,6 +1,17 @@
 export type RunState = "running" | "paused" | "levelup" | "won" | "lost";
 export type DifficultyId = "easy" | "normal" | "hard";
-export type EnemyTypeId = "nymph" | "adult" | "guard" | "boss";
+export type EnemyTypeId =
+  | "nymph"
+  | "adult"
+  | "guard"
+  | "skitter"
+  | "brute"
+  | "stinger"
+  | "razor"
+  | "carrier"
+  | "behemoth"
+  | "phantom"
+  | "boss";
 export type DecorationType = "puddle" | "crumb" | "cap" | "drain" | "stain";
 export type ObstacleType = "pipe" | "barrel" | "trash";
 export type PickupType = "xp" | "goldEgg";
@@ -69,12 +80,18 @@ export interface PlayerEntity extends EntityBase {
 
 export interface EnemyEntity extends EntityBase {
   type: EnemyTypeId;
+  name: string;
   maxHp: number;
   speed: number;
   damage: number;
   xp: number;
   tint: string;
   pulse: number;
+  bossWave?: number;
+  summonCooldown?: number;
+  summonTimer?: number;
+  summonBurst?: number;
+  summonPool?: EnemyTypeId[];
 }
 
 export interface ProjectileEntity {
@@ -170,6 +187,10 @@ export interface DifficultyConfig {
   runDuration: number;
   bossWaves: number;
   description: string;
+  hpMultiplier: number;
+  damageMultiplier: number;
+  speedMultiplier: number;
+  goldenEggDropChance: number;
 }
 
 export interface MetaUpgradeLevels {

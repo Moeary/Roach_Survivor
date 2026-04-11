@@ -206,16 +206,18 @@ select {
 }
 
 .difficulty-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
 .difficulty-pill {
+  width: 100%;
   padding: 10px 16px;
   border: 1px solid rgba(214, 239, 109, 0.14);
   border-radius: 999px;
   color: var(--text);
+  text-align: center;
   cursor: pointer;
   background: rgba(10, 14, 12, 0.72);
   transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, color 140ms ease;
@@ -469,6 +471,14 @@ select {
   box-shadow: 0 28px 54px var(--shadow-heavy);
 }
 
+.modal-wide {
+  width: min(1240px, 100%);
+}
+
+.modal-compact {
+  width: min(760px, 100%);
+}
+
 .buff-modal-head {
   display: flex;
   align-items: center;
@@ -542,7 +552,7 @@ select {
 
 .meta-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-top: 20px;
 }
@@ -564,6 +574,148 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.audio-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.audio-card,
+.compendium-card {
+  border: 1px solid rgba(214, 239, 109, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.audio-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.audio-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.audio-card-head span,
+.compendium-card-head span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--lime);
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.audio-card-head strong {
+  font-size: 1.4rem;
+}
+
+.audio-card-head em,
+.compendium-card-head em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.audio-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.volume-slider {
+  width: 100%;
+  accent-color: var(--lime);
+  cursor: pointer;
+}
+
+.compendium-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.compendium-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.compendium-card-boss {
+  background:
+    linear-gradient(180deg, rgba(113, 33, 41, 0.1), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.03);
+}
+
+.compendium-preview-svg {
+  display: block;
+  width: 100%;
+  height: 182px;
+}
+
+.compendium-card-boss .compendium-preview-svg {
+  height: 220px;
+}
+
+.compendium-card-head {
+  display: grid;
+  gap: 10px;
+}
+
+.compendium-card h3 {
+  font-size: 1.34rem;
+}
+
+.compendium-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 10px;
+}
+
+.compendium-difficulty {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(214, 239, 109, 0.12);
+  border-radius: 18px;
+  background: rgba(9, 12, 10, 0.54);
+}
+
+.compendium-difficulty strong {
+  font-size: 1rem;
+}
+
+.compendium-difficulty-easy {
+  border-color: rgba(214, 239, 109, 0.22);
+}
+
+.compendium-difficulty-normal {
+  border-color: rgba(255, 186, 100, 0.2);
+}
+
+.compendium-difficulty-hard {
+  border-color: rgba(228, 84, 68, 0.28);
+}
+
+.compendium-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.compendium-stat-row b {
+  color: var(--text);
+  font-size: 0.98rem;
 }
 
 .tutorial-grid {
@@ -898,6 +1050,10 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .hero-panel h1 {
     max-width: none;
   }
@@ -938,7 +1094,8 @@ select {
   .tutorial-grid,
   .buff-grid,
   .meta-grid,
-  .choice-grid {
+  .choice-grid,
+  .compendium-grid {
     grid-template-columns: 1fr;
   }
 
