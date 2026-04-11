@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { GameAudioController } from "./audio/gameAudio";
+import { GameAudioController, loadAudioSettings, normalizeAudioSettings, saveAudioSettings, type AudioSettings } from "./audio/gameAudio";
 import BuffSetupModal from "./components/BuffSetupModal";
 import ChangelogModal from "./components/ChangelogModal";
+import EnemyCompendiumModal from "./components/EnemyCompendiumModal";
 import GameScreen from "./components/GameScreen";
 import MetaUpgradeModal from "./components/MetaUpgradeModal";
 import StartScreen from "./components/StartScreen";
 import TutorialModal from "./components/TutorialModal";
+import VolumeSettingsModal from "./components/VolumeSettingsModal";
 import { addGoldenEggs, loadMetaProfile, purchaseMetaUpgrade, resetMetaUpgrades, saveMetaProfile } from "./game/meta";
 import { ALL_UPGRADE_IDS, DEFAULT_RUN_SETUP } from "./game/run/config";
 import type { DifficultyId, MetaUpgradeId, UpgradeId } from "./game/types";
@@ -15,17 +17,25 @@ export default function App() {
   const [screen, setScreen] = useState<"menu" | "game">("menu");
   const [buffSetupOpen, setBuffSetupOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
+  const [compendiumOpen, setCompendiumOpen] = useState(false);
   const [metaUpgradeOpen, setMetaUpgradeOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [volumeSettingsOpen, setVolumeSettingsOpen] = useState(false);
+  const [audioSettings, setAudioSettings] = useState<AudioSettings>(() => loadAudioSettings());
   const [menuDifficultyId, setMenuDifficultyId] = useState<DifficultyId>(DEFAULT_RUN_SETUP.difficultyId);
   const [menuEnabledUpgrades, setMenuEnabledUpgrades] = useState<UpgradeId[]>(DEFAULT_RUN_SETUP.enabledUpgrades);
   const [runSetup, setRunSetup] = useState(DEFAULT_RUN_SETUP);
   const [runKey, setRunKey] = useState(0);
-  const [menuAudio] = useState(() => new GameAudioController());
+  const [menuAudio] = useState(() => new GameAudioController(audioSettings));
 
   useEffect(() => {
     saveMetaProfile(profile);
   }, [profile]);
+
+  useEffect(() => {
+    saveAudioSettings(audioSettings);
+    menuAudio.setSettings(audioSettings);
+  }, [audioSettings, menuAudio]);
 
   function playMenuCue(cueId: Parameters<typeof menuAudio.playCue>[0]) {
     menuAudio.unlock();
@@ -120,6 +130,13 @@ export default function App() {
     });
   }
 
+  function updateAudioSetting<K extends keyof AudioSettings>(key: K, value: AudioSettings[K]) {
+    setAudioSettings((current) => normalizeAudioSettings({
+      ...current,
+      [key]: value,
+    }));
+  }
+
   return (
     <div className="app-shell">
       {screen === "menu" ? (
@@ -131,8 +148,10 @@ export default function App() {
             totalBuffCount={ALL_UPGRADE_IDS.length}
             onOpenBuffSetup={() => { playMenuCue("uiOpen"); setBuffSetupOpen(true); }}
             onOpenChangelog={() => { playMenuCue("uiOpen"); setChangelogOpen(true); }}
+            onOpenCompendium={() => { playMenuCue("uiOpen"); setCompendiumOpen(true); }}
             onOpenMetaUpgrade={() => { playMenuCue("uiOpen"); setMetaUpgradeOpen(true); }}
             onOpenTutorial={() => { playMenuCue("uiOpen"); setTutorialOpen(true); }}
+            onOpenVolumeSettings={() => { playMenuCue("uiOpen"); setVolumeSettingsOpen(true); }}
             onCheatGoldenEggs={() => { playMenuCue("cheat"); awardGoldenEggs(100); }}
             onSelectDifficulty={selectDifficulty}
             onStart={startGame}
@@ -145,6 +164,7 @@ export default function App() {
             selectedUpgrades={menuEnabledUpgrades}
           />
           <ChangelogModal isOpen={changelogOpen} onClose={() => setChangelogOpen(false)} />
+          <EnemyCompendiumModal isOpen={compendiumOpen} onClose={() => setCompendiumOpen(false)} />
           <MetaUpgradeModal
             goldenEggs={profile.goldenEggs}
             isOpen={metaUpgradeOpen}
@@ -154,9 +174,17 @@ export default function App() {
             onReset={resetAllMetaUpgrades}
           />
           <TutorialModal isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} />
+          <VolumeSettingsModal
+            isOpen={volumeSettingsOpen}
+            onChange={updateAudioSetting}
+            onClose={() => setVolumeSettingsOpen(false)}
+            onPreviewBgm={() => menuAudio.previewBgm("menu")}
+            onPreviewSfx={() => menuAudio.previewCue("levelUp")}
+            settings={audioSettings}
+          />
         </>
       ) : (
-        <GameScreen key={runKey} onAwardGoldenEggs={awardGoldenEggs} onReturnToMenu={returnToMenu} setup={runSetup} />
+        <GameScreen key={runKey} audioSettings={audioSettings} onAwardGoldenEggs={awardGoldenEggs} onReturnToMenu={returnToMenu} setup={runSetup} />
       )}
     </div>
   );

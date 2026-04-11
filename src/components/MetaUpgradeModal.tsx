@@ -32,19 +32,18 @@ export default function MetaUpgradeModal({
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
       <section
         aria-modal="true"
-        className="tutorial-modal"
+        className="tutorial-modal modal-wide"
         role="dialog"
         aria-label="局外升级"
         onClick={(event) => event.stopPropagation()}
       >
         <p className="menu-eyebrow">META UPGRADES</p>
         <h2>主角外部升级</h2>
-        <p className="modal-copy">消耗金色卵鞘强化主角开局属性。数据会通过 Cookie 自动保存在本地，下次打开还能继续加点。</p>
+        <p className="modal-copy">消耗金色卵鞘强化主角开局属性。进度会自动保存在本地，下次打开还能继续加点。</p>
 
         <div className="buff-modal-head">
           <strong>当前库存 {goldenEggs} 枚金色卵鞘</strong>
           <div className="modal-inline-actions">
-            <span className="currency-pill">Cookie 已启用持久化</span>
             <button className="button-secondary" type="button" onClick={onReset} disabled={!canReset}>
               重置升级 返还 {refund} - 1
             </button>
