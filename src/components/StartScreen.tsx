@@ -101,7 +101,7 @@ export default function StartScreen({
               <section className="config-card">
                 <span>局外成长</span>
                 <strong>{goldenEggs} 枚金色卵鞘</strong>
-                <p>可用来强化主角开局攻击、速度和血量。进度会自动保存在本地。</p>
+                <p>可用来强化主角开局攻击、速度、血量和自动回血。进度会自动保存在本地。</p>
                 <button className="button-secondary" type="button" onClick={onOpenMetaUpgrade}>
                   外部升级
                 </button>

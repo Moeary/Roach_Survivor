@@ -12,11 +12,13 @@ export type EnemyTypeId =
   | "behemoth"
   | "phantom"
   | "boss";
+export type BossRole = "wave" | "summon";
+export type BossActionState = "chase" | "teleport-windup" | "teleport-recover" | "dash-windup" | "dash-active";
 export type DecorationType = "puddle" | "crumb" | "cap" | "drain" | "stain";
 export type ObstacleType = "pipe" | "barrel" | "trash";
 export type PickupType = "xp" | "goldEgg";
 export type ProjectileVariant = "manual" | "auto";
-export type MetaUpgradeId = "baseDamage" | "baseMoveSpeed" | "baseMaxHp" | "buffRefresh";
+export type MetaUpgradeId = "baseDamage" | "baseMoveSpeed" | "baseMaxHp" | "buffRefresh" | "autoRegen";
 export type GameEventType = "playerShot" | "enemyDie" | "goldEggGain" | "playerHurt" | "xpGain" | "levelUp" | "buffReroll";
 export type UpgradeId =
   | "damage"
@@ -53,6 +55,7 @@ export interface PlayerStats {
   orbitalRespawn: number;
   orbitalDistance: number;
   orbitalSpeed: number;
+  hpRegenPerSecond: number;
 }
 
 export interface EntityBase {
@@ -88,6 +91,15 @@ export interface EnemyEntity extends EntityBase {
   tint: string;
   pulse: number;
   bossWave?: number;
+  bossRole?: BossRole;
+  bossAction?: BossActionState;
+  bossActionTimer?: number;
+  bossActionCooldown?: number;
+  bossTargetX?: number;
+  bossTargetY?: number;
+  bossDashDirectionX?: number;
+  bossDashDirectionY?: number;
+  ignoresObstacles?: boolean;
   summonCooldown?: number;
   summonTimer?: number;
   summonBurst?: number;
@@ -198,6 +210,7 @@ export interface MetaUpgradeLevels {
   baseMoveSpeed: number;
   baseMaxHp: number;
   buffRefresh: number;
+  autoRegen: number;
 }
 
 export interface MetaProfile {

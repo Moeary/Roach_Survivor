@@ -14,9 +14,10 @@ import {
   togglePause,
   updateGame,
 } from "../game/core";
+import { getBossWaveTime } from "../game/stages";
 import { GameAudioController, getBgmTrackForState, type AudioSettings } from "../audio/gameAudio";
 import { summarizeUpgrades } from "../game/upgrades";
-import type { GameState, InputState, RunSetup } from "../game/types";
+import type { EnemyEntity, GameState, InputState, RunSetup } from "../game/types";
 import EnemySprite from "./sprites/enemies/EnemySprite";
 import PlayerSprite from "./sprites/player/PlayerSprite";
 import EffectSprite from "./sprites/world/EffectSprite";
@@ -67,6 +68,49 @@ function AimReticle({ state, input }: { state: GameState; input: InputState }) {
         <circle r="12" fill="none" stroke="rgba(240, 250, 215, 0.72)" strokeWidth="2" />
         <path d="M -18 0 H -6 M 6 0 H 18 M 0 -18 V -6 M 0 6 V 18" stroke="#f6fbdf" strokeWidth="2" strokeLinecap="round" />
       </g>
+    </g>
+  );
+}
+
+function BossTelegraphs({ enemies, state }: { enemies: EnemyEntity[]; state: GameState }) {
+  return (
+    <g>
+      {enemies.map((enemy) => {
+        if (enemy.type !== "boss") {
+          return null;
+        }
+
+        if (enemy.bossAction === "teleport-windup" && enemy.bossTargetX !== undefined && enemy.bossTargetY !== undefined) {
+          const pulse = 1 + Math.sin(enemy.pulse * 2) * 0.08;
+          const radius = (state.player.radius + 18) * pulse;
+
+          return (
+            <g key={`${enemy.id}-teleport-warning`} transform={`translate(${toFixed(enemy.bossTargetX)} ${toFixed(enemy.bossTargetY)})`}>
+              <circle r={toFixed(radius + 18)} fill="rgba(255, 108, 132, 0.1)" />
+              <circle r={toFixed(radius)} fill="none" stroke="rgba(255, 164, 182, 0.84)" strokeWidth="4" strokeDasharray="10 10" />
+              <circle r={toFixed(Math.max(10, radius * 0.34))} fill="rgba(255, 209, 219, 0.16)" />
+            </g>
+          );
+        }
+
+        if (enemy.bossAction === "dash-windup" && enemy.bossTargetX !== undefined && enemy.bossTargetY !== undefined) {
+          const deltaX = enemy.bossTargetX - enemy.x;
+          const deltaY = enemy.bossTargetY - enemy.y;
+          const length = Math.hypot(deltaX, deltaY);
+          const angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
+          const width = enemy.radius + state.player.radius * 0.66;
+
+          return (
+            <g key={`${enemy.id}-dash-warning`} transform={`translate(${toFixed(enemy.x)} ${toFixed(enemy.y)}) rotate(${toFixed(angle)})`}>
+              <path d={`M 0 0 L ${toFixed(length)} 0`} stroke="rgba(255, 122, 68, 0.14)" strokeWidth={toFixed(width * 1.8)} strokeLinecap="round" />
+              <path d={`M 0 0 L ${toFixed(length)} 0`} stroke="rgba(255, 181, 126, 0.92)" strokeWidth="6" strokeDasharray="18 12" strokeLinecap="round" />
+              <circle cx={toFixed(length)} cy="0" r="18" fill="rgba(255, 178, 112, 0.12)" />
+            </g>
+          );
+        }
+
+        return null;
+      })}
     </g>
   );
 }
@@ -129,8 +173,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
       return false;
     }
 
-    const bossInterval = state.runDuration / state.difficulty.bossWaves;
-    const nextBossTime = bossInterval * (state.bossWavesSpawned + 1);
+    const nextBossTime = getBossWaveTime(state.bossWavesSpawned + 1);
     const targetTime = Math.max(0, nextBossTime - 5);
 
     if (state.timer >= targetTime) {
@@ -293,7 +336,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
   const summary = summarizeUpgrades(state);
   const healthRatio = clamp(state.player.hp / state.player.maxHp, 0, 1);
   const xpRatio = clamp(state.xp / state.xpToNext, 0, 1);
-  const nextBossTime = (state.runDuration / state.difficulty.bossWaves) * (state.bossWavesSpawned + 1);
+  const nextBossTime = getBossWaveTime(state.bossWavesSpawned + 1);
   const fastForwardTarget = Math.max(0, nextBossTime - 5);
   const canFastForward = state.runState === "running" && !state.bossSpawned && state.bossWavesSpawned < state.difficulty.bossWaves && state.timer < fastForwardTarget;
   const targetText = `存活 ${formatTime(state.runDuration)} 并击败 ${state.difficulty.bossWaves} 波 Boss`;
@@ -336,6 +379,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
           </g>
           <g>{visibleObstacles.map((obstacle) => <ObstacleSprite key={obstacle.id} obstacle={obstacle} />)}</g>
           <g>{visiblePickups.map((pickup) => <PickupSprite key={pickup.id} pickup={pickup} />)}</g>
+          <g><BossTelegraphs enemies={visibleEnemies} state={state} /></g>
           <g>{visibleEnemies.map((enemy) => <EnemySprite key={enemy.id} enemy={enemy} />)}</g>
           <g>{visibleProjectiles.map((projectile) => <ProjectileSprite key={projectile.id} projectile={projectile} />)}</g>
           <g>{visibleOrbitals.map((orbital) => <OrbitalSprite key={orbital.id} orbital={orbital} />)}</g>

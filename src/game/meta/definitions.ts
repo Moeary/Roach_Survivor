@@ -18,6 +18,7 @@ export const EMPTY_META_UPGRADES: MetaUpgradeLevels = {
   baseMoveSpeed: 0,
   baseMaxHp: 0,
   buffRefresh: 0,
+  autoRegen: 0,
 };
 
 export const DEFAULT_META_PROFILE: MetaProfile = {
@@ -69,6 +70,16 @@ export const META_UPGRADE_DEFS: MetaUpgradeDefinition[] = [
     maxLevel: 3,
     costs: [10, 15, 20],
   },
+  {
+    id: "autoRegen",
+    name: "自动回血",
+    shortName: "回血",
+    description: "战斗中持续自动恢复生命。每级 +1 点/秒，满级 3 点/秒。",
+    bonusStep: 1,
+    bonusUnit: "点/秒",
+    maxLevel: 3,
+    costs: [10, 20, 30],
+  },
 ];
 
 const META_UPGRADE_MAP = new Map<MetaUpgradeId, MetaUpgradeDefinition>(META_UPGRADE_DEFS.map((upgrade) => [upgrade.id, upgrade]));
@@ -83,6 +94,7 @@ export function normalizeMetaUpgrades(metaUpgrades?: Partial<MetaUpgradeLevels>)
     baseMoveSpeed: Math.min(META_UPGRADE_MAP.get("baseMoveSpeed")!.maxLevel, clampLevel(metaUpgrades?.baseMoveSpeed)),
     baseMaxHp: Math.min(META_UPGRADE_MAP.get("baseMaxHp")!.maxLevel, clampLevel(metaUpgrades?.baseMaxHp)),
     buffRefresh: Math.min(META_UPGRADE_MAP.get("buffRefresh")!.maxLevel, clampLevel(metaUpgrades?.buffRefresh)),
+    autoRegen: Math.min(META_UPGRADE_MAP.get("autoRegen")!.maxLevel, clampLevel(metaUpgrades?.autoRegen)),
   };
 }
 
