@@ -1,3 +1,4 @@
+import { FINAL_BOSS_TIME, STAGE_THREE_START_TIME, STAGE_TWO_START_TIME } from "../../stages";
 import type { EnemyTypeDefinition, EnemyTypeId } from "../../types";
 
 type SpawnWeight = {
@@ -9,13 +10,13 @@ export const ENEMY_APPEAR_AT: Record<Exclude<EnemyTypeId, "boss">, number> = {
   nymph: 0,
   adult: 0,
   guard: 0,
-  skitter: 300,
-  brute: 300,
-  stinger: 300,
-  razor: 600,
-  carrier: 600,
-  behemoth: 600,
-  phantom: 600,
+  skitter: STAGE_TWO_START_TIME,
+  brute: STAGE_TWO_START_TIME,
+  stinger: STAGE_TWO_START_TIME,
+  razor: STAGE_THREE_START_TIME,
+  carrier: STAGE_THREE_START_TIME,
+  behemoth: STAGE_THREE_START_TIME,
+  phantom: STAGE_THREE_START_TIME,
 };
 
 export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
@@ -25,7 +26,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     radius: 18,
     hp: 24,
     speed: 124,
-    damage: 6,
+    damage: 5,
     xp: 1,
     tint: "#d6bf80",
   },
@@ -35,7 +36,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     radius: 24,
     hp: 48,
     speed: 96,
-    damage: 10,
+    damage: 8,
     xp: 2,
     tint: "#a75e34",
   },
@@ -45,7 +46,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     radius: 34,
     hp: 102,
     speed: 66,
-    damage: 16,
+    damage: 12,
     xp: 4,
     tint: "#54372c",
   },
@@ -55,8 +56,8 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     radius: 16,
     hp: 32,
     speed: 154,
-    damage: 8,
-    xp: 2,
+    damage: 6,
+    xp: 3,
     tint: "#c89064",
   },
   brute: {
@@ -66,7 +67,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     hp: 168,
     speed: 54,
     damage: 18,
-    xp: 5,
+    xp: 6,
     tint: "#7b4c3a",
   },
   stinger: {
@@ -75,8 +76,8 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     radius: 23,
     hp: 76,
     speed: 118,
-    damage: 15,
-    xp: 4,
+    damage: 12,
+    xp: 5,
     tint: "#90462b",
   },
   razor: {
@@ -85,8 +86,8 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     radius: 20,
     hp: 92,
     speed: 138,
-    damage: 17,
-    xp: 4,
+    damage: 10,
+    xp: 7,
     tint: "#662420",
   },
   carrier: {
@@ -95,8 +96,8 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     radius: 30,
     hp: 172,
     speed: 82,
-    damage: 20,
-    xp: 6,
+    damage: 16,
+    xp: 8,
     tint: "#66713a",
   },
   behemoth: {
@@ -106,7 +107,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     hp: 280,
     speed: 48,
     damage: 25,
-    xp: 9,
+    xp: 11,
     tint: "#3b4038",
   },
   phantom: {
@@ -115,8 +116,8 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     radius: 17,
     hp: 86,
     speed: 166,
-    damage: 18,
-    xp: 5,
+    damage: 10,
+    xp: 7,
     tint: "#7e8998",
   },
   boss: {
@@ -147,8 +148,8 @@ function rollWeightedEnemy(weights: SpawnWeight[]): EnemyTypeId {
 }
 
 export function pickEnemyTypeForTime(timer: number): EnemyTypeId {
-  if (timer < 300) {
-    const intensity = Math.max(0, Math.min(1, timer / 300));
+  if (timer < STAGE_TWO_START_TIME) {
+    const intensity = Math.max(0, Math.min(1, timer / STAGE_TWO_START_TIME));
     return rollWeightedEnemy([
       { id: "nymph", weight: 58 - intensity * 18 },
       { id: "adult", weight: 28 + intensity * 10 },
@@ -156,8 +157,8 @@ export function pickEnemyTypeForTime(timer: number): EnemyTypeId {
     ]);
   }
 
-  if (timer < 600) {
-    const intensity = Math.max(0, Math.min(1, (timer - 300) / 300));
+  if (timer < STAGE_THREE_START_TIME) {
+    const intensity = Math.max(0, Math.min(1, (timer - STAGE_TWO_START_TIME) / (STAGE_THREE_START_TIME - STAGE_TWO_START_TIME)));
     return rollWeightedEnemy([
       { id: "nymph", weight: 16 - intensity * 6 },
       { id: "adult", weight: 20 - intensity * 5 },
@@ -168,7 +169,7 @@ export function pickEnemyTypeForTime(timer: number): EnemyTypeId {
     ]);
   }
 
-  const intensity = Math.max(0, Math.min(1, (timer - 600) / 300));
+  const intensity = Math.max(0, Math.min(1, (timer - STAGE_THREE_START_TIME) / Math.max(1, FINAL_BOSS_TIME - STAGE_THREE_START_TIME)));
   return rollWeightedEnemy([
     { id: "nymph", weight: 7 - intensity * 4 },
     { id: "adult", weight: 8 - intensity * 3 },

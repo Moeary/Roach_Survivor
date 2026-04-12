@@ -1,4 +1,5 @@
 import { EMPTY_META_UPGRADES, normalizeMetaUpgrades } from "../meta";
+import { getRunDurationForBossWaves } from "../stages";
 import { UPGRADE_DEFS } from "../upgrades";
 import type { DifficultyConfig, DifficultyId, RunSetup, UpgradeId } from "../types";
 
@@ -8,9 +9,9 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyId, DifficultyConfig> = {
   easy: {
     id: "easy",
     label: "简单",
-    runDuration: 300,
+    runDuration: getRunDurationForBossWaves(1),
     bossWaves: 1,
-    description: "5 分钟，1 波 Boss，敌人维持基础强度。",
+    description: "4 分钟，1 波 Boss，敌人维持基础强度。",
     hpMultiplier: 1,
     damageMultiplier: 1,
     speedMultiplier: 1,
@@ -19,23 +20,23 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyId, DifficultyConfig> = {
   normal: {
     id: "normal",
     label: "普通",
-    runDuration: 600,
+    runDuration: getRunDurationForBossWaves(2),
     bossWaves: 2,
-    description: "10 分钟，2 波 Boss，怪物生命和伤害 1.5 倍，速度 1.2 倍。",
+    description: "7 分钟，2 波 Boss，怪物生命和伤害 1.5 倍，速度 1.1 倍。",
     hpMultiplier: 1.5,
     damageMultiplier: 1.5,
-    speedMultiplier: 1.2,
+    speedMultiplier: 1.1,
     goldenEggDropChance: 0.002,
   },
   hard: {
     id: "hard",
     label: "困难",
-    runDuration: 900,
+    runDuration: getRunDurationForBossWaves(3),
     bossWaves: 3,
-    description: "15 分钟，3 波 Boss，怪物生命和伤害 2 倍，速度 1.4 倍。",
+    description: "10 分钟，3 波 Boss，怪物生命和伤害 2 倍，速度 1.2 倍。",
     hpMultiplier: 2,
     damageMultiplier: 2,
-    speedMultiplier: 1.4,
+    speedMultiplier: 1.2,
     goldenEggDropChance: 0.002,
   },
 };

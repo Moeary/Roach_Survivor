@@ -7,6 +7,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "v0.7 Boss Timing & Meta Sustain",
+    date: "2026-04-12",
+    summary: "压缩整局时长，修正第一波 Boss 传送锁点，并补上自动回血局外升级。",
+    items: [
+      "每局节奏重排为 4:00 / 7:00 / 10:00 三个阶段节点，简单、普通、困难分别对应 1 / 2 / 3 波 Boss。",
+      "第一波 Boss 的贴脸传送改为开始前摇时就固定落点，不会因为前摇变长而持续修正到主角脸上。",
+      "第二、三阶段怪物时间轴随新节奏同步压缩，图鉴与 HUD 里的阶段时间也一起更新。",
+      "局外升级新增自动回血，最高 3 级，每级每秒恢复 1 点生命，花费为 10 / 20 / 30 金色卵鞘。",
+      "主页当前版本号更新为 v0.7。",
+    ],
+  },
+  {
     version: "v0.6 UI, Audio & Bestiary",
     date: "2026-04-11",
     summary: "主页补上音量面板、怪物图鉴和更顺手的菜单排版。",

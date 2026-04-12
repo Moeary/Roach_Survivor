@@ -2,6 +2,7 @@
 import { ENEMY_TYPES, pickEnemyTypeForTime } from "./entities/enemies";
 import { createPlayer } from "./entities/player";
 import { getDifficultyConfig, normalizeRunSetup } from "./run/config";
+import { getBossWaveTime, STAGE_THREE_START_TIME, STAGE_TWO_START_TIME } from "./stages";
 import type {
   Decoration,
   DecorationType,
@@ -39,9 +40,21 @@ export type BossWaveConfig = {
   damage: Partial<Record<DifficultyId, number>>;
   speed: Partial<Record<DifficultyId, number>>;
   radius: number;
+  skillCooldown?: number;
+  skillWindup?: Partial<Record<DifficultyId, number>>;
+  skillRecovery?: Partial<Record<DifficultyId, number>>;
+  skillLockWindow?: number;
+  dashSpeed?: Partial<Record<DifficultyId, number>>;
+  dashDuration?: number;
+  supportXpReward?: number;
+  supportHpScale?: number;
+  supportDamageScale?: number;
+  supportSpeedScale?: number;
+  supportRadiusScale?: number;
   summonCooldown?: number;
   summonBurst?: number;
   summonPool?: EnemyTypeId[];
+  summonBossChance?: number;
 };
 
 export const BOSS_WAVE_CONFIGS: Record<number, BossWaveConfig> = {
@@ -63,6 +76,23 @@ export const BOSS_WAVE_CONFIGS: Record<number, BossWaveConfig> = {
       hard: 90,
     },
     radius: 72,
+    skillCooldown: 6.6,
+    skillWindup: {
+      easy: 1.4,
+      normal: 0.85,
+      hard: 0.45,
+    },
+    skillRecovery: {
+      easy: 0.95,
+      normal: 0.8,
+      hard: 0.65,
+    },
+    skillLockWindow: 0.24,
+    supportXpReward: 18,
+    supportHpScale: 0.58,
+    supportDamageScale: 0.9,
+    supportSpeedScale: 1.04,
+    supportRadiusScale: 0.94,
   },
   2: {
     name: "裂足暴君",
@@ -76,9 +106,25 @@ export const BOSS_WAVE_CONFIGS: Record<number, BossWaveConfig> = {
     },
     speed: {
       normal: 166,
-      hard: 192,
+      hard: 384,
     },
     radius: 78,
+    skillCooldown: 5.1,
+    skillWindup: {
+      normal: 0.9,
+      hard: 0.6,
+    },
+    skillLockWindow: 0.14,
+    dashSpeed: {
+      normal: 620,
+      hard: 1400,
+    },
+    dashDuration: 0.72,
+    supportXpReward: 28,
+    supportHpScale: 0.52,
+    supportDamageScale: 0.84,
+    supportSpeedScale: 1,
+    supportRadiusScale: 0.92,
   },
   3: {
     name: "终焉孵化母巢",
@@ -95,6 +141,7 @@ export const BOSS_WAVE_CONFIGS: Record<number, BossWaveConfig> = {
     summonCooldown: 7.5,
     summonBurst: 4,
     summonPool: ["razor", "phantom", "carrier", "behemoth"],
+    summonBossChance: 0.2,
   },
 };
 
@@ -116,8 +163,40 @@ function resolveDifficultyValue(values: Partial<Record<DifficultyId, number>>, d
   return values[difficultyId] ?? values.hard ?? values.normal ?? values.easy ?? 0;
 }
 
+function resolveBossTimingValue(
+  values: Partial<Record<DifficultyId, number>> | undefined,
+  difficultyId: DifficultyId,
+  fallback: number,
+): number {
+  if (!values) {
+    return fallback;
+  }
+
+  return values[difficultyId] ?? values.hard ?? values.normal ?? values.easy ?? fallback;
+}
+
 function getBossWaveConfig(bossWave: number): BossWaveConfig {
   return BOSS_WAVE_CONFIGS[bossWave] ?? BOSS_WAVE_CONFIGS[1]!;
+}
+
+function getSpawnDistanceRange(state: GameState): { minDistance: number; maxDistance: number } {
+  const progress = Math.min(1, state.timer / Math.max(1, state.runDuration));
+  const minDistance = 720 + progress * 140;
+  return {
+    minDistance,
+    maxDistance: minDistance + 240,
+  };
+}
+
+function clearBossAction(boss: EnemyEntity, cooldown?: number): void {
+  boss.bossAction = "chase";
+  boss.bossActionTimer = 0;
+  boss.bossActionCooldown = cooldown;
+  boss.bossTargetX = undefined;
+  boss.bossTargetY = undefined;
+  boss.bossDashDirectionX = undefined;
+  boss.bossDashDirectionY = undefined;
+  boss.ignoresObstacles = false;
 }
 
 function getChunkCoord(value: number): number {
@@ -279,10 +358,6 @@ export function resetInputState(input: InputState): void {
   input.pointerScreenY = VIEWPORT_HEIGHT / 2;
 }
 
-function getBossWaveInterval(state: GameState): number {
-  return state.runDuration / state.difficulty.bossWaves;
-}
-
 export function createGameState(setup?: RunSetup): GameState {
   const normalizedSetup = normalizeRunSetup(setup);
   const difficulty = getDifficultyConfig(normalizedSetup.difficultyId);
@@ -349,13 +424,11 @@ export function getPhaseLabel(state: GameState): string {
     return `母巢清算 ${state.bossWavesSpawned}/${state.difficulty.bossWaves}`;
   }
 
-  const progress = state.timer / state.runDuration;
-
-  if (progress < 0.2) {
+  if (state.timer < STAGE_TWO_START_TIME || state.difficulty.bossWaves <= 1) {
     return "孵化期";
   }
 
-  if (progress < 0.68) {
+  if (state.timer < STAGE_THREE_START_TIME || state.difficulty.bossWaves <= 2) {
     return "泛滥期";
   }
 
@@ -387,7 +460,13 @@ export function getStatusLabel(state: GameState): string {
 }
 
 export function getBoss(state: GameState): EnemyEntity | null {
-  return state.enemies.find((enemy) => enemy.type === "boss" && enemy.alive) ?? null;
+  return state.enemies.find((enemy) => enemy.type === "boss" && enemy.alive && enemy.bossRole !== "summon")
+    ?? state.enemies.find((enemy) => enemy.type === "boss" && enemy.alive)
+    ?? null;
+}
+
+function getLivingSummonedBossCount(state: GameState): number {
+  return state.enemies.reduce((count, enemy) => count + (enemy.alive && enemy.type === "boss" && enemy.bossRole === "summon" ? 1 : 0), 0);
 }
 
 function getNearestEnemy(state: GameState, x: number, y: number, maxDistance?: number): EnemyEntity | null {
@@ -458,6 +537,20 @@ function spawnPickup(state: GameState, x: number, y: number, value: number, type
   state.nextPickupId += 1;
 }
 
+function dropXpOrbs(state: GameState, x: number, y: number, totalXp: number): void {
+  const clampedXp = Math.max(1, Math.round(totalXp));
+  const orbCount = clampedXp >= 18 ? 4 : clampedXp >= 8 ? 3 : clampedXp >= 4 ? 2 : 1;
+
+  for (let index = 0; index < orbCount; index += 1) {
+    spawnPickup(
+      state,
+      x + randomRange(-12, 12),
+      y + randomRange(-12, 12),
+      Math.max(1, Math.round(clampedXp / orbCount)),
+    );
+  }
+}
+
 function getBossGoldenEggReward(state: GameState, bossWave: number): number {
   if (bossWave === 1) {
     return state.difficulty.id === "easy" ? 5 : state.difficulty.id === "normal" ? 7 : 9;
@@ -507,6 +600,12 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity): void {
   });
 
   if (enemy.type === "boss") {
+    if (enemy.bossRole === "summon") {
+      const rewardXp = enemy.xp > 0 ? enemy.xp : (getBossWaveConfig(enemy.bossWave ?? 1).supportXpReward ?? 12);
+      dropXpOrbs(state, enemy.x, enemy.y, rewardXp);
+      return;
+    }
+
     state.bossSpawned = false;
     state.bossWavesDefeated += 1;
     const reward = getBossGoldenEggReward(state, state.bossWavesDefeated);
@@ -523,16 +622,7 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity): void {
     return;
   }
 
-  const orbCount = enemy.xp >= 8 ? 3 : enemy.xp >= 4 ? 2 : 1;
-
-  for (let index = 0; index < orbCount; index += 1) {
-    spawnPickup(
-      state,
-      enemy.x + randomRange(-12, 12),
-      enemy.y + randomRange(-12, 12),
-      Math.max(1, Math.round(enemy.xp / orbCount)),
-    );
-  }
+  dropXpOrbs(state, enemy.x, enemy.y, enemy.xp);
 
   maybeDropGoldenEgg(state, enemy);
 }
@@ -575,8 +665,16 @@ function findSpawnPositionAroundPoint(
   };
 }
 
-function findSpawnPosition(state: GameState, radius: number, minDistance = 560, maxDistance = 760): { x: number; y: number } {
-  return findSpawnPositionAroundPoint(state, state.player.x, state.player.y, radius, minDistance, maxDistance);
+function findSpawnPosition(state: GameState, radius: number, minDistance?: number, maxDistance?: number): { x: number; y: number } {
+  const range =
+    minDistance === undefined || maxDistance === undefined
+      ? getSpawnDistanceRange(state)
+      : {
+          minDistance,
+          maxDistance,
+        };
+
+  return findSpawnPositionAroundPoint(state, state.player.x, state.player.y, radius, range.minDistance, range.maxDistance);
 }
 
 function spawnEnemy(state: GameState, enemyTypeId: EnemyTypeId, position?: { x: number; y: number }): EnemyEntity {
@@ -603,6 +701,15 @@ function spawnEnemy(state: GameState, enemyTypeId: EnemyTypeId, position?: { x: 
     alive: true,
     pulse: randomRange(0, Math.PI * 2),
     bossWave: template.id === "boss" ? 1 : undefined,
+    bossRole: template.id === "boss" ? "wave" : undefined,
+    bossAction: template.id === "boss" ? "chase" : undefined,
+    bossActionTimer: undefined,
+    bossActionCooldown: undefined,
+    bossTargetX: undefined,
+    bossTargetY: undefined,
+    bossDashDirectionX: undefined,
+    bossDashDirectionY: undefined,
+    ignoresObstacles: false,
     summonCooldown: undefined,
     summonTimer: undefined,
     summonBurst: undefined,
@@ -624,12 +731,261 @@ function applyBossWaveConfig(state: GameState, boss: EnemyEntity, bossWave: numb
   boss.hp = boss.maxHp;
   boss.damage = resolveDifficultyValue(config.damage, state.difficulty.id);
   boss.speed = resolveDifficultyValue(config.speed, state.difficulty.id);
+  boss.xp = config.supportXpReward ?? 0;
   boss.radius = config.radius;
   boss.summonCooldown = config.summonCooldown;
   boss.summonTimer = config.summonCooldown;
   boss.summonBurst = config.summonBurst;
   boss.summonPool = config.summonPool ? [...config.summonPool] : undefined;
+  clearBossAction(boss, config.skillCooldown ? config.skillCooldown * 0.72 : undefined);
   resolveAgainstObstacles(state, boss, 12);
+}
+
+function beginBossTeleport(state: GameState, boss: EnemyEntity, config: BossWaveConfig): void {
+  boss.bossAction = "teleport-windup";
+  boss.bossActionTimer = resolveBossTimingValue(config.skillWindup, state.difficulty.id, 1.4);
+  boss.bossTargetX = state.player.x;
+  boss.bossTargetY = state.player.y;
+  boss.vx = 0;
+  boss.vy = 0;
+  boss.ignoresObstacles = false;
+
+  createEffect(state, {
+    x: boss.x,
+    y: boss.y,
+    radius: boss.radius * 1.4,
+    tint: "#ff7d88",
+    duration: 0.26,
+  });
+}
+
+function beginBossDash(state: GameState, boss: EnemyEntity, config: BossWaveConfig): void {
+  boss.bossAction = "dash-windup";
+  boss.bossActionTimer = resolveBossTimingValue(config.skillWindup, state.difficulty.id, 0.9);
+  boss.bossTargetX = state.player.x;
+  boss.bossTargetY = state.player.y;
+  boss.bossDashDirectionX = undefined;
+  boss.bossDashDirectionY = undefined;
+  boss.vx = 0;
+  boss.vy = 0;
+  boss.ignoresObstacles = false;
+
+  createEffect(state, {
+    x: boss.x,
+    y: boss.y,
+    radius: boss.radius * 1.25,
+    tint: "#ff8c4f",
+    duration: 0.22,
+  });
+}
+
+function updateBossTeleport(state: GameState, boss: EnemyEntity, dt: number, config: BossWaveConfig): boolean {
+  const timer = Math.max(0, (boss.bossActionTimer ?? resolveBossTimingValue(config.skillWindup, state.difficulty.id, 1.4)) - dt);
+  boss.bossActionTimer = timer;
+  boss.vx = 0;
+  boss.vy = 0;
+
+  if (boss.bossTargetX === undefined || boss.bossTargetY === undefined) {
+    boss.bossTargetX = state.player.x;
+    boss.bossTargetY = state.player.y;
+  }
+
+  if (timer > 0) {
+    return true;
+  }
+
+  const targetX = boss.bossTargetX ?? state.player.x;
+  const targetY = boss.bossTargetY ?? state.player.y;
+
+  createEffect(state, {
+    x: boss.x,
+    y: boss.y,
+    radius: boss.radius * 1.2,
+    tint: "#8a2d49",
+    duration: 0.22,
+  });
+
+  boss.x = targetX;
+  boss.y = targetY;
+  resolveAgainstObstacles(state, boss, 8);
+
+  createEffect(state, {
+    x: boss.x,
+    y: boss.y,
+    radius: boss.radius * 1.65,
+    tint: "#ff8d96",
+    duration: 0.32,
+  });
+
+  boss.bossAction = "teleport-recover";
+  boss.bossActionTimer = resolveBossTimingValue(config.skillRecovery, state.difficulty.id, 0.95);
+  boss.bossTargetX = undefined;
+  boss.bossTargetY = undefined;
+  return true;
+}
+
+function updateBossTeleportRecovery(state: GameState, boss: EnemyEntity, dt: number, config: BossWaveConfig): boolean {
+  boss.vx = 0;
+  boss.vy = 0;
+  boss.bossActionTimer = Math.max(0, (boss.bossActionTimer ?? resolveBossTimingValue(config.skillRecovery, state.difficulty.id, 0.95)) - dt);
+
+  if ((boss.bossActionTimer ?? 0) <= 0) {
+    clearBossAction(boss, config.skillCooldown);
+  }
+
+  return true;
+}
+
+function updateBossDashWindup(state: GameState, boss: EnemyEntity, dt: number, config: BossWaveConfig): boolean {
+  const timer = Math.max(0, (boss.bossActionTimer ?? resolveBossTimingValue(config.skillWindup, state.difficulty.id, 0.9)) - dt);
+  const lockWindow = config.skillLockWindow ?? 0.14;
+  boss.bossActionTimer = timer;
+  boss.vx = 0;
+  boss.vy = 0;
+
+  if (timer > lockWindow || boss.bossTargetX === undefined || boss.bossTargetY === undefined) {
+    boss.bossTargetX = state.player.x;
+    boss.bossTargetY = state.player.y;
+  }
+
+  if (timer > 0) {
+    return true;
+  }
+
+  const targetX = boss.bossTargetX ?? state.player.x;
+  const targetY = boss.bossTargetY ?? state.player.y;
+  const direction = normalize(targetX - boss.x, targetY - boss.y);
+  const dashDistance = Math.max(320, Math.min(880, distance(boss.x, boss.y, targetX, targetY) + state.player.radius + boss.radius * 0.6));
+
+  boss.bossDashDirectionX = direction.x;
+  boss.bossDashDirectionY = direction.y;
+  boss.bossTargetX = boss.x + direction.x * dashDistance;
+  boss.bossTargetY = boss.y + direction.y * dashDistance;
+  boss.bossAction = "dash-active";
+  boss.bossActionTimer = config.dashDuration ?? 0.72;
+  boss.ignoresObstacles = true;
+
+  createEffect(state, {
+    x: boss.x,
+    y: boss.y,
+    radius: boss.radius * 1.4,
+    tint: "#ff9f5f",
+    duration: 0.24,
+  });
+
+  return true;
+}
+
+function updateBossDashActive(state: GameState, boss: EnemyEntity, dt: number, config: BossWaveConfig): boolean {
+  const directionX = boss.bossDashDirectionX ?? 0;
+  const directionY = boss.bossDashDirectionY ?? 0;
+  const dashSpeed = resolveDifficultyValue(config.dashSpeed ?? config.speed, state.difficulty.id);
+
+  if (!directionX && !directionY) {
+    clearBossAction(boss, config.skillCooldown);
+    return false;
+  }
+
+  const targetX = boss.bossTargetX ?? boss.x;
+  const targetY = boss.bossTargetY ?? boss.y;
+  const remainingDistance = distance(boss.x, boss.y, targetX, targetY);
+  const travel = Math.min(dashSpeed * dt, remainingDistance);
+
+  boss.vx = directionX * dashSpeed;
+  boss.vy = directionY * dashSpeed;
+  boss.x += directionX * travel;
+  boss.y += directionY * travel;
+  boss.bossActionTimer = Math.max(0, (boss.bossActionTimer ?? config.dashDuration ?? 0.72) - dt);
+
+  if (remainingDistance <= travel + 0.001 || (boss.bossActionTimer ?? 0) <= 0) {
+    boss.x = targetX;
+    boss.y = targetY;
+    clearBossAction(boss, config.skillCooldown);
+    resolveAgainstObstacles(state, boss, 12);
+  }
+
+  return true;
+}
+
+function updateBossAction(state: GameState, boss: EnemyEntity, dt: number): boolean {
+  const bossWave = boss.bossWave ?? 1;
+  const config = getBossWaveConfig(bossWave);
+
+  if (boss.bossAction === "teleport-windup") {
+    return updateBossTeleport(state, boss, dt, config);
+  }
+
+  if (boss.bossAction === "teleport-recover") {
+    return updateBossTeleportRecovery(state, boss, dt, config);
+  }
+
+  if (boss.bossAction === "dash-windup") {
+    return updateBossDashWindup(state, boss, dt, config);
+  }
+
+  if (boss.bossAction === "dash-active") {
+    return updateBossDashActive(state, boss, dt, config);
+  }
+
+  if (boss.bossActionCooldown !== undefined) {
+    boss.bossActionCooldown -= dt;
+  }
+
+  const playerDistance = distance(boss.x, boss.y, state.player.x, state.player.y);
+
+  if (bossWave === 1 && (boss.bossActionCooldown ?? Number.POSITIVE_INFINITY) <= 0) {
+    if (playerDistance <= boss.radius + state.player.radius + 48) {
+      boss.bossActionCooldown = 1.2;
+      return false;
+    }
+
+    beginBossTeleport(state, boss, config);
+    return true;
+  }
+
+  if (bossWave === 2 && (boss.bossActionCooldown ?? Number.POSITIVE_INFINITY) <= 0) {
+    if (playerDistance <= boss.radius + state.player.radius + 120) {
+      boss.bossActionCooldown = 0.7;
+      return false;
+    }
+
+    beginBossDash(state, boss, config);
+    return true;
+  }
+
+  return false;
+}
+
+function spawnSummonedSupportBoss(state: GameState, parentBoss: EnemyEntity): boolean {
+  if (getLivingSummonedBossCount(state) >= 1) {
+    return false;
+  }
+
+  const supportWave = Math.random() < 0.5 ? 1 : 2;
+  const config = getBossWaveConfig(supportWave);
+  const radiusScale = config.supportRadiusScale ?? 1;
+  const spawnRadius = config.radius * radiusScale;
+  const position = findSpawnPositionAroundPoint(state, parentBoss.x, parentBoss.y, spawnRadius, parentBoss.radius + 54, parentBoss.radius + 166);
+  const supportBoss = spawnEnemy(state, "boss", position);
+  supportBoss.bossRole = "summon";
+  applyBossWaveConfig(state, supportBoss, supportWave);
+  supportBoss.radius = spawnRadius;
+  supportBoss.maxHp = Math.max(1, Math.round(supportBoss.maxHp * (config.supportHpScale ?? 1)));
+  supportBoss.hp = supportBoss.maxHp;
+  supportBoss.damage = Math.max(1, Math.round(supportBoss.damage * (config.supportDamageScale ?? 1)));
+  supportBoss.speed = Number((supportBoss.speed * (config.supportSpeedScale ?? 1)).toFixed(1));
+  supportBoss.xp = config.supportXpReward ?? supportBoss.xp;
+  resolveAgainstObstacles(state, supportBoss, 12);
+
+  createEffect(state, {
+    x: supportBoss.x,
+    y: supportBoss.y,
+    radius: supportBoss.radius * 1.9,
+    tint: supportWave === 2 ? "#ff8f4a" : "#e45b73",
+    duration: 0.54,
+  });
+
+  return true;
 }
 
 function summonBossMinions(state: GameState, boss: EnemyEntity): void {
@@ -645,7 +1001,16 @@ function summonBossMinions(state: GameState, boss: EnemyEntity): void {
     return;
   }
 
-  for (let index = 0; index < summonCount; index += 1) {
+  let remainingSummons = summonCount;
+  const bossConfig = getBossWaveConfig(boss.bossWave ?? 1);
+
+  if (boss.bossWave === 3 && remainingSummons > 0 && Math.random() < (bossConfig.summonBossChance ?? 0)) {
+    if (spawnSummonedSupportBoss(state, boss)) {
+      remainingSummons -= 1;
+    }
+  }
+
+  for (let index = 0; index < remainingSummons; index += 1) {
     const enemyType = boss.summonPool[Math.floor(Math.random() * boss.summonPool.length)]!;
     const position = findSpawnPositionAroundPoint(
       state,
@@ -756,6 +1121,28 @@ function updatePlayerMovement(state: GameState, input: InputState, dt: number): 
   }
 }
 
+function updatePlayerRegeneration(state: GameState, dt: number): void {
+  const { player } = state;
+
+  if (player.hp <= 0 || player.stats.hpRegenPerSecond <= 0 || player.hp >= player.maxHp) {
+    return;
+  }
+
+  player.hp = Math.min(player.maxHp, player.hp + player.stats.hpRegenPerSecond * dt);
+}
+
+function handlePlayerDeath(state: GameState): boolean {
+  if (state.player.hp > 0) {
+    return false;
+  }
+
+  state.player.hp = 0;
+  state.player.alive = false;
+  state.runState = "lost";
+  autoCollectGoldenEggs(state);
+  return true;
+}
+
 function updateEnemies(state: GameState, dt: number): void {
   const { player } = state;
   const livingEnemies: EnemyEntity[] = [];
@@ -773,20 +1160,30 @@ function updateEnemies(state: GameState, dt: number): void {
       }
     }
 
-    const direction = normalize(player.x - enemy.x, player.y - enemy.y);
-    const aggression = enemy.type === "boss" ? 1 : 1 + Math.min(0.35, state.timer * 0.0011);
+    const handledBossAction = enemy.type === "boss" ? updateBossAction(state, enemy, dt) : false;
 
-    enemy.vx = direction.x * enemy.speed * aggression;
-    enemy.vy = direction.y * enemy.speed * aggression;
-    enemy.x += enemy.vx * dt;
-    enemy.y += enemy.vy * dt;
-    resolveAgainstObstacles(state, enemy, 12);
-    enemy.pulse += dt * 5;
+    if (!handledBossAction) {
+      const direction = normalize(player.x - enemy.x, player.y - enemy.y);
+      const aggression = enemy.type === "boss" ? 1 : 1 + Math.min(0.35, state.timer * 0.0011);
+
+      enemy.vx = direction.x * enemy.speed * aggression;
+      enemy.vy = direction.y * enemy.speed * aggression;
+      enemy.x += enemy.vx * dt;
+      enemy.y += enemy.vy * dt;
+
+      if (!enemy.ignoresObstacles) {
+        resolveAgainstObstacles(state, enemy, 12);
+      }
+    }
+
+    enemy.pulse += dt * (enemy.type === "boss" && enemy.bossAction !== "chase" ? 8 : 5);
     livingEnemies.push(enemy);
 
+    const contactDirection = normalize(player.x - enemy.x, player.y - enemy.y);
+
     if (distance(enemy.x, enemy.y, player.x, player.y) <= enemy.radius + player.radius - 3 && player.contactTimer <= 0) {
-      const knockbackX = direction.x * 28;
-      const knockbackY = direction.y * 28;
+      const knockbackX = contactDirection.x * 28;
+      const knockbackY = contactDirection.y * 28;
 
       player.hp = Math.max(0, player.hp - enemy.damage);
       player.contactTimer = CONTACT_COOLDOWN;
@@ -796,7 +1193,10 @@ function updateEnemies(state: GameState, dt: number): void {
       enemy.x -= knockbackX * 0.7;
       enemy.y -= knockbackY * 0.7;
       resolveAgainstObstacles(state, player);
-      resolveAgainstObstacles(state, enemy, 12);
+
+      if (!enemy.ignoresObstacles) {
+        resolveAgainstObstacles(state, enemy, 12);
+      }
 
       createEffect(state, {
         x: player.x,
@@ -829,8 +1229,14 @@ function updateEnemies(state: GameState, dt: number): void {
       firstEnemy.y -= normalY * push;
       secondEnemy.x += normalX * push;
       secondEnemy.y += normalY * push;
-      resolveAgainstObstacles(state, firstEnemy, 12);
-      resolveAgainstObstacles(state, secondEnemy, 12);
+
+      if (!firstEnemy.ignoresObstacles) {
+        resolveAgainstObstacles(state, firstEnemy, 12);
+      }
+
+      if (!secondEnemy.ignoresObstacles) {
+        resolveAgainstObstacles(state, secondEnemy, 12);
+      }
     }
   }
 }
@@ -1238,17 +1644,18 @@ export function updateGame(state: GameState, input: InputState, deltaSeconds: nu
   }
 
   const dt = Math.min(0.05, deltaSeconds);
-  const bossInterval = getBossWaveInterval(state);
+  const currentBossTime = getBossWaveTime(state.bossWavesSpawned);
+  const nextBossTime = getBossWaveTime(state.bossWavesSpawned + 1);
 
   if (state.bossSpawned) {
-    state.timer = Math.min(state.runDuration, bossInterval * state.bossWavesSpawned);
+    state.timer = Math.min(state.runDuration, currentBossTime);
   } else {
     state.timer = Math.min(state.runDuration, state.timer + dt);
   }
 
   ensureWorldAroundPlayer(state);
 
-  if (state.timer >= bossInterval * (state.bossWavesSpawned + 1)) {
+  if (state.timer >= nextBossTime) {
     spawnBoss(state);
   }
 
@@ -1256,6 +1663,13 @@ export function updateGame(state: GameState, input: InputState, deltaSeconds: nu
   ensureWorldAroundPlayer(state);
   updateSpawning(state, dt);
   updateEnemies(state, dt);
+
+  if (handlePlayerDeath(state)) {
+    cleanupEntities(state);
+    return state;
+  }
+
+  updatePlayerRegeneration(state, dt);
   updateManualFire(state, input, dt);
   updateAutoTurrets(state, dt);
   updateOrbitals(state, dt);
@@ -1264,11 +1678,7 @@ export function updateGame(state: GameState, input: InputState, deltaSeconds: nu
   updateEffects(state, dt);
   cleanupEntities(state);
 
-  if (state.player.hp <= 0) {
-    state.player.alive = false;
-    state.runState = "lost";
-    autoCollectGoldenEggs(state);
-  }
+  handlePlayerDeath(state);
 
   if (state.runState === "running") {
     checkLevelUp(state);
@@ -1321,5 +1731,4 @@ export function formatTime(seconds: number): string {
   const remainder = String(wholeSeconds % 60).padStart(2, "0");
   return minutes + ":" + remainder;
 }
-
 

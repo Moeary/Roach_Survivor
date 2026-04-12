@@ -34,17 +34,20 @@ export function createPlayer(metaUpgrades?: Parameters<typeof normalizeMetaUpgra
       orbitalRespawn: 1.15,
       orbitalDistance: 92,
       orbitalSpeed: 3.7,
+      hpRegenPerSecond: 0,
     },
   };
 
   const damageBonus = getMetaUpgradeBonus("baseDamage", normalizedMeta.baseDamage);
   const moveSpeedBonus = getMetaUpgradeBonus("baseMoveSpeed", normalizedMeta.baseMoveSpeed);
   const hpBonus = getMetaUpgradeBonus("baseMaxHp", normalizedMeta.baseMaxHp);
+  const regenBonus = getMetaUpgradeBonus("autoRegen", normalizedMeta.autoRegen);
 
   player.stats.projectileDamage += damageBonus;
   player.stats.moveSpeed += moveSpeedBonus;
   player.maxHp += hpBonus;
   player.hp += hpBonus;
+  player.stats.hpRegenPerSecond += regenBonus;
 
   return player;
 }
