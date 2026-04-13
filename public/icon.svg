@@ -1,0 +1,67 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="iconBg" x1="40" y1="28" x2="220" y2="236" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#31453b" />
+      <stop offset="0.52" stop-color="#18231d" />
+      <stop offset="1" stop-color="#0d120f" />
+    </linearGradient>
+    <radialGradient id="iconGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 108) rotate(90) scale(110 102)">
+      <stop offset="0" stop-color="#F6DE98" stop-opacity="0.86" />
+      <stop offset="0.52" stop-color="#C98D4D" stop-opacity="0.28" />
+      <stop offset="1" stop-color="#C98D4D" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="shellFill" x1="128" y1="86" x2="128" y2="206" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6B403F" />
+      <stop offset="1" stop-color="#2D171C" />
+    </linearGradient>
+    <linearGradient id="shellInner" x1="128" y1="98" x2="128" y2="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8C5D58" />
+      <stop offset="1" stop-color="#513130" />
+    </linearGradient>
+    <linearGradient id="faceFill" x1="128" y1="40" x2="128" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFD5B0" />
+      <stop offset="1" stop-color="#F4B98F" />
+    </linearGradient>
+    <linearGradient id="eggFill" x1="128" y1="150" x2="128" y2="212" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8D66C" />
+      <stop offset="1" stop-color="#D79A28" />
+    </linearGradient>
+    <filter id="shadowSoft" x="36" y="18" width="184" height="204" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix" />
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" />
+      <feOffset dy="8" />
+      <feGaussianBlur stdDeviation="10" />
+      <feComposite in2="hardAlpha" operator="out" />
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0313726 0 0 0 0 0.0392157 0 0 0 0 0.0352941 0 0 0 0.34 0" />
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1" />
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape" />
+    </filter>
+  </defs>
+
+  <rect x="12" y="12" width="232" height="232" rx="56" fill="url(#iconBg)" />
+  <rect x="16" y="16" width="224" height="224" rx="52" stroke="#FAE5B0" stroke-opacity="0.18" stroke-width="2" />
+  <circle cx="128" cy="106" r="96" fill="url(#iconGlow)" />
+
+  <g filter="url(#shadowSoft)">
+    <path d="M111 54C109 28 98 16 78 12" stroke="#171113" stroke-width="8" stroke-linecap="round" />
+    <path d="M145 54C147 28 158 16 178 12" stroke="#171113" stroke-width="8" stroke-linecap="round" />
+
+    <path d="M94 107C86 127 86 145 92 168" stroke="#171113" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M162 107C170 127 170 145 164 168" stroke="#171113" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+
+    <ellipse cx="128" cy="148" rx="58" ry="77" fill="url(#shellFill)" stroke="#171113" stroke-width="8" />
+    <ellipse cx="128" cy="148" rx="42" ry="63" fill="url(#shellInner)" />
+    <path d="M128 107C142 121 150 141 148 172C147 189 140 205 128 216C116 205 109 189 108 172C106 141 114 121 128 107Z" stroke="#A47568" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+
+    <circle cx="128" cy="80" r="44" fill="url(#faceFill)" stroke="#171113" stroke-width="8" />
+    <circle cx="108" cy="96" r="7" fill="#F89FA4" fill-opacity="0.9" />
+    <circle cx="148" cy="96" r="7" fill="#F89FA4" fill-opacity="0.9" />
+    <circle cx="117" cy="74" r="5" fill="#171113" />
+    <circle cx="139" cy="74" r="5" fill="#171113" />
+    <path d="M119 106C122 116 134 116 137 106" stroke="#171113" stroke-width="6" stroke-linecap="round" />
+
+    <path d="M118 191C114 202 120 210 128 210C136 210 142 202 138 191" fill="url(#eggFill)" stroke="#171113" stroke-width="6" stroke-linejoin="round" />
+    <path d="M128 192V207" stroke="#8C5B1D" stroke-width="4" stroke-linecap="round" />
+    <path d="M120 197H136" stroke="#8C5B1D" stroke-width="4" stroke-linecap="round" opacity="0.85" />
+  </g>
+</svg>

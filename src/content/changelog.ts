@@ -7,6 +7,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "v0.8 Desktop Release & Deployment Tooling",
+    date: "2026-04-13",
+    summary: "补上桌面端分发、Docker 部署和站点分析接线，并把当前版本推进到 v0.8。",
+    items: [
+      "接入 Vercel Analytics，浏览器部署可直接统计访问，Electron 本地页面会自动跳过分析上报。",
+      "新增 Electron 主进程、打包脚本和 electron-builder 配置，可生成 Windows NSIS 与 Linux AppImage 桌面端产物。",
+      "新增 GitHub Actions 发布流程，推送 v* tag 后会自动创建 Release 并一次性上传 Windows 和 Linux 的 amd64 构建。",
+      "新增 Dockerfile、docker-compose.yml 和 Nginx 静态托管配置，方便本地或服务器直接容器化部署。",
+      "补上 SVG 应用图标，并将项目当前版本更新为 v0.8。",
+    ],
+  },
+  {
     version: "v0.7 Boss Timing & Meta Sustain",
     date: "2026-04-12",
     summary: "压缩整局时长，修正第一波 Boss 传送锁点，并补上自动回血局外升级。",

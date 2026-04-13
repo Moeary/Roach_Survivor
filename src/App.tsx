@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import { GameAudioController, loadAudioSettings, normalizeAudioSettings, saveAudioSettings, type AudioSettings } from "./audio/gameAudio";
 import BuffSetupModal from "./components/BuffSetupModal";
 import ChangelogModal from "./components/ChangelogModal";
@@ -11,6 +12,18 @@ import VolumeSettingsModal from "./components/VolumeSettingsModal";
 import { addGoldenEggs, loadMetaProfile, purchaseMetaUpgrade, resetMetaUpgrades, saveMetaProfile } from "./game/meta";
 import { ALL_UPGRADE_IDS, DEFAULT_RUN_SETUP } from "./game/run/config";
 import type { DifficultyId, MetaUpgradeId, UpgradeId } from "./game/types";
+
+function shouldEnableAnalytics() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  if (window.location.protocol === "file:") {
+    return false;
+  }
+
+  return !window.navigator.userAgent.toLowerCase().includes("electron");
+}
 
 export default function App() {
   const [profile, setProfile] = useState(() => loadMetaProfile());
@@ -27,6 +40,7 @@ export default function App() {
   const [runSetup, setRunSetup] = useState(DEFAULT_RUN_SETUP);
   const [runKey, setRunKey] = useState(0);
   const [menuAudio] = useState(() => new GameAudioController(audioSettings));
+  const analyticsEnabled = shouldEnableAnalytics();
 
   useEffect(() => {
     saveMetaProfile(profile);
@@ -186,6 +200,7 @@ export default function App() {
       ) : (
         <GameScreen key={runKey} audioSettings={audioSettings} onAwardGoldenEggs={awardGoldenEggs} onReturnToMenu={returnToMenu} setup={runSetup} />
       )}
+      {analyticsEnabled ? <Analytics mode={import.meta.env.DEV ? "development" : "production"} /> : null}
     </div>
   );
 }
