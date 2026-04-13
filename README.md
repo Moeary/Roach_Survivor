@@ -29,6 +29,46 @@ npm run dev
 npm run build
 ```
 
+桌面端打包：
+
+```bash
+# 当前系统可打的 Electron 包
+npm run electron:dist
+
+# Windows NSIS 安装包
+npm run electron:dist:win
+
+# Linux AppImage
+npm run electron:dist:linux
+```
+
+Electron 打包产物会输出到 `release/`。
+
+## 发布流程
+
+- Web 端已经接入 `@vercel/analytics/react`，浏览器部署时会自动注入分析；Electron 的 `file://` 本地页面会自动跳过统计。
+- 仓库新增了 `.github/workflows/release-electron.yml`，当推送 `v*` tag 时会自动构建：
+  - Windows `amd64`：`CockroachSurvivor-windows-amd64-版本号.exe`
+  - Linux `amd64`：`CockroachSurvivor-linux-amd64-版本号.AppImage`
+- workflow 会先创建对应 GitHub Release，再把两个平台的桌面端产物一次性上传上去。
+- 推荐 tag 形式为 `v0.8.0`；如果你继续沿用 `v0.8`，CI 也会自动归一化成可打包的版本号。
+
+示例：
+
+```bash
+git tag v0.8.0
+git push origin v0.8.0
+```
+
+## Docker
+
+```bash
+docker compose up --build
+```
+
+- 默认通过 `http://localhost:8080` 提供静态页面。
+- `Dockerfile` 使用多阶段构建：Node 负责编译 Vite，Nginx 负责分发 `dist/`。
+
 ## 操作
 
 - `WASD` / 方向键：移动
