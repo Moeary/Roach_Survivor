@@ -1,5 +1,6 @@
 ﻿import { applyUpgrade, pickUpgradeChoices } from "./upgrades";
 import { ENEMY_TYPES, pickEnemyTypeForTime } from "./entities/enemies";
+import { AUTO_REGEN_INTERVAL_SECONDS } from "./meta";
 import { createPlayer } from "./entities/player";
 import { getDifficultyConfig, normalizeRunSetup } from "./run/config";
 import { getBossWaveTime, STAGE_THREE_START_TIME, STAGE_TWO_START_TIME } from "./stages";
@@ -491,7 +492,7 @@ function getNearestEnemy(state: GameState, x: number, y: number, maxDistance?: n
 
 function createEffect(
   state: GameState,
-  effect: Pick<EffectEntity, "x" | "y" | "radius" | "tint"> & Partial<Pick<EffectEntity, "duration">>,
+  effect: Pick<EffectEntity, "x" | "y" | "radius" | "tint"> & Partial<Pick<EffectEntity, "duration" | "type">>,
 ): void {
   state.effects.push({
     id: "fx-" + state.nextEffectId,
@@ -502,7 +503,7 @@ function createEffect(
     y: effect.y,
     radius: effect.radius,
     tint: effect.tint,
-    type: "burst",
+    type: effect.type ?? "burst",
   });
   state.nextEffectId += 1;
 }
@@ -749,6 +750,7 @@ function beginBossTeleport(state: GameState, boss: EnemyEntity, config: BossWave
   boss.vx = 0;
   boss.vy = 0;
   boss.ignoresObstacles = false;
+  queueGameEvent(state, "bossSkillCharge");
 
   createEffect(state, {
     x: boss.x,
@@ -769,6 +771,7 @@ function beginBossDash(state: GameState, boss: EnemyEntity, config: BossWaveConf
   boss.vx = 0;
   boss.vy = 0;
   boss.ignoresObstacles = false;
+  queueGameEvent(state, "bossSkillCharge");
 
   createEffect(state, {
     x: boss.x,
@@ -808,6 +811,7 @@ function updateBossTeleport(state: GameState, boss: EnemyEntity, dt: number, con
   boss.x = targetX;
   boss.y = targetY;
   resolveAgainstObstacles(state, boss, 8);
+  queueGameEvent(state, "bossSkillCast");
 
   createEffect(state, {
     x: boss.x,
@@ -864,6 +868,7 @@ function updateBossDashWindup(state: GameState, boss: EnemyEntity, dt: number, c
   boss.bossAction = "dash-active";
   boss.bossActionTimer = config.dashDuration ?? 0.72;
   boss.ignoresObstacles = true;
+  queueGameEvent(state, "bossSkillCast");
 
   createEffect(state, {
     x: boss.x,
@@ -1003,10 +1008,12 @@ function summonBossMinions(state: GameState, boss: EnemyEntity): void {
 
   let remainingSummons = summonCount;
   const bossConfig = getBossWaveConfig(boss.bossWave ?? 1);
+  let didSummon = false;
 
   if (boss.bossWave === 3 && remainingSummons > 0 && Math.random() < (bossConfig.summonBossChance ?? 0)) {
     if (spawnSummonedSupportBoss(state, boss)) {
       remainingSummons -= 1;
+      didSummon = true;
     }
   }
 
@@ -1022,6 +1029,7 @@ function summonBossMinions(state: GameState, boss: EnemyEntity): void {
     );
     const minion = spawnEnemy(state, enemyType, position);
     minion.pulse = randomRange(0, Math.PI * 2);
+    didSummon = true;
 
     createEffect(state, {
       x: minion.x,
@@ -1039,6 +1047,10 @@ function summonBossMinions(state: GameState, boss: EnemyEntity): void {
     tint: "#b63d4f",
     duration: 0.38,
   });
+
+  if (didSummon) {
+    queueGameEvent(state, "bossSummon");
+  }
 
   boss.summonTimer = boss.summonCooldown * (boss.hp / boss.maxHp <= 0.45 ? 0.72 : 1);
 }
@@ -1124,11 +1136,16 @@ function updatePlayerMovement(state: GameState, input: InputState, dt: number): 
 function updatePlayerRegeneration(state: GameState, dt: number): void {
   const { player } = state;
 
-  if (player.hp <= 0 || player.stats.hpRegenPerSecond <= 0 || player.hp >= player.maxHp) {
+  if (player.hp <= 0 || player.stats.hpRegenAmount <= 0 || player.hp >= player.maxHp) {
     return;
   }
 
-  player.hp = Math.min(player.maxHp, player.hp + player.stats.hpRegenPerSecond * dt);
+  player.regenTickTimer -= dt;
+
+  while (player.regenTickTimer <= 0 && player.hp < player.maxHp) {
+    player.hp = Math.min(player.maxHp, player.hp + player.stats.hpRegenAmount);
+    player.regenTickTimer += AUTO_REGEN_INTERVAL_SECONDS;
+  }
 }
 
 function handlePlayerDeath(state: GameState): boolean {
@@ -1138,6 +1155,7 @@ function handlePlayerDeath(state: GameState): boolean {
 
   state.player.hp = 0;
   state.player.alive = false;
+  queueGameEvent(state, "playerDefeat");
   state.runState = "lost";
   autoCollectGoldenEggs(state);
   return true;
@@ -1184,10 +1202,11 @@ function updateEnemies(state: GameState, dt: number): void {
     if (distance(enemy.x, enemy.y, player.x, player.y) <= enemy.radius + player.radius - 3 && player.contactTimer <= 0) {
       const knockbackX = contactDirection.x * 28;
       const knockbackY = contactDirection.y * 28;
+      const damage = enemy.damage * player.stats.contactDamageMultiplier;
 
-      player.hp = Math.max(0, player.hp - enemy.damage);
+      player.hp = Math.max(0, player.hp - damage);
       player.contactTimer = CONTACT_COOLDOWN;
-      queueGameEvent(state, "playerHurt", enemy.damage);
+      queueGameEvent(state, "playerHurt", Number(damage.toFixed(1)));
       player.x += knockbackX;
       player.y += knockbackY;
       enemy.x -= knockbackX * 0.7;
@@ -1355,7 +1374,7 @@ function updateAutoTurrets(state: GameState, dt: number): void {
 
     fireSpread(state, angle, player.stats.autoTurretCount, {
       variant: "auto",
-      damage: player.stats.projectileDamage * 0.68,
+      damage: player.stats.autoTurretDamage,
       hitsRemaining: 1,
       life: 1.2,
       radius: 10,
@@ -1479,6 +1498,137 @@ function updateOrbitals(state: GameState, dt: number): void {
   });
 }
 
+function getBestLightningTarget(state: GameState): EnemyEntity | null {
+  const { player } = state;
+  let bestTarget: EnemyEntity | null = null;
+  let bestClusterSize = -1;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  const clusterRadius = Math.max(72, player.stats.lightningRadius * 1.25);
+
+  state.enemies.forEach((enemy) => {
+    if (!enemy.alive) {
+      return;
+    }
+
+    const playerDistance = distance(player.x, player.y, enemy.x, enemy.y);
+
+    if (playerDistance > player.stats.lightningTargetRange) {
+      return;
+    }
+
+    let clusterSize = 0;
+
+    state.enemies.forEach((candidate) => {
+      if (!candidate.alive) {
+        return;
+      }
+
+      if (distance(enemy.x, enemy.y, candidate.x, candidate.y) <= clusterRadius + candidate.radius) {
+        clusterSize += 1;
+      }
+    });
+
+    if (clusterSize > bestClusterSize || (clusterSize === bestClusterSize && playerDistance < bestDistance)) {
+      bestTarget = enemy;
+      bestClusterSize = clusterSize;
+      bestDistance = playerDistance;
+    }
+  });
+
+  return bestTarget;
+}
+
+function updateLightningStorm(state: GameState, dt: number): void {
+  const { player } = state;
+
+  if (player.stats.lightningDamage <= 0 || player.stats.lightningRadius <= 0 || player.stats.lightningCooldown <= 0) {
+    return;
+  }
+
+  player.lightningTimer -= dt;
+
+  while (player.lightningTimer <= 0) {
+    const target = getBestLightningTarget(state);
+
+    if (!target) {
+      player.lightningTimer = 0;
+      return;
+    }
+
+    const strikeX = target.x;
+    const strikeY = target.y;
+    const strikeRadius = player.stats.lightningRadius;
+    const strikeDamage = player.stats.lightningDamage;
+
+    state.enemies.forEach((enemy) => {
+      if (!enemy.alive) {
+        return;
+      }
+
+      if (distance(strikeX, strikeY, enemy.x, enemy.y) > strikeRadius + enemy.radius) {
+        return;
+      }
+
+      enemy.hp -= strikeDamage;
+
+      if (enemy.hp <= 0) {
+        defeatEnemy(state, enemy);
+      }
+    });
+
+    createEffect(state, {
+      x: strikeX,
+      y: strikeY,
+      radius: strikeRadius,
+      tint: "#8feaff",
+      duration: 0.24,
+      type: "lightning",
+    });
+    createEffect(state, {
+      x: strikeX,
+      y: strikeY,
+      radius: Math.max(24, strikeRadius * 0.58),
+      tint: "#eefcff",
+      duration: 0.18,
+    });
+    queueGameEvent(state, "lightningStrike");
+    player.lightningTimer += player.stats.lightningCooldown;
+  }
+}
+
+function explodeProjectile(state: GameState, projectile: ProjectileEntity, x: number, y: number): void {
+  if (projectile.variant !== "manual" || state.player.stats.explosionRadius <= 0 || state.player.stats.explosionDamageRatio <= 0) {
+    return;
+  }
+
+  const radius = state.player.stats.explosionRadius;
+  const damage = projectile.damage * state.player.stats.explosionDamageRatio;
+
+  state.enemies.forEach((enemy) => {
+    if (!enemy.alive) {
+      return;
+    }
+
+    if (distance(x, y, enemy.x, enemy.y) > radius + enemy.radius) {
+      return;
+    }
+
+    enemy.hp -= damage;
+
+    if (enemy.hp <= 0) {
+      defeatEnemy(state, enemy);
+    }
+  });
+
+  createEffect(state, {
+    x,
+    y,
+    radius,
+    tint: "#ffd680",
+    duration: 0.22,
+  });
+}
+
 function projectileHitsObstacle(projectile: ProjectileEntity, obstacles: ObstacleEntity[]): boolean {
   return obstacles.some((obstacle) => distance(projectile.x, projectile.y, obstacle.x, obstacle.y) <= projectile.radius + obstacle.radius * 0.86);
 }
@@ -1495,6 +1645,7 @@ function updateProjectiles(state: GameState, dt: number): void {
 
     if (projectile.life <= 0) {
       projectile.alive = false;
+      explodeProjectile(state, projectile, projectile.x, projectile.y);
       return;
     }
 
@@ -1507,6 +1658,7 @@ function updateProjectiles(state: GameState, dt: number): void {
         tint: "#7f8e92",
         duration: 0.18,
       });
+      explodeProjectile(state, projectile, projectile.x, projectile.y);
       return;
     }
 
@@ -1537,6 +1689,7 @@ function updateProjectiles(state: GameState, dt: number): void {
 
       if (projectile.hitsRemaining <= 0) {
         projectile.alive = false;
+        explodeProjectile(state, projectile, projectile.x, projectile.y);
         break;
       }
     }
@@ -1672,6 +1825,7 @@ export function updateGame(state: GameState, input: InputState, deltaSeconds: nu
   updatePlayerRegeneration(state, dt);
   updateManualFire(state, input, dt);
   updateAutoTurrets(state, dt);
+  updateLightningStorm(state, dt);
   updateOrbitals(state, dt);
   updateProjectiles(state, dt);
   updatePickups(state, dt);
@@ -1699,7 +1853,7 @@ export function chooseUpgrade(state: GameState, upgradeId: UpgradeId): boolean {
   }
 
   state.upgradeChoices = [];
-  state.player.hp = Math.min(state.player.maxHp, state.player.hp + 18);
+  state.player.hp = Math.min(state.player.maxHp, state.player.hp + state.player.stats.levelUpHeal);
   state.runState = "running";
   return true;
 }
@@ -1731,4 +1885,3 @@ export function formatTime(seconds: number): string {
   const remainder = String(wholeSeconds % 60).padStart(2, "0");
   return minutes + ":" + remainder;
 }
-

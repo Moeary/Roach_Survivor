@@ -31,7 +31,7 @@ const SLIDER_SETTINGS: SliderSetting[] = [
   {
     key: "sfxVolume",
     label: "SFX 音量",
-    description: "调整射击、升级和受击音效，松手后会播放 level-up 作为反馈。",
+    description: "调整射击、Boss 技能、雷击、升级和失败音效，松手后会播放 level-up 作为反馈。",
     preview: "sfx",
   },
 ];

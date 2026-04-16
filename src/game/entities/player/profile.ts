@@ -1,4 +1,4 @@
-import { getMetaUpgradeBonus, normalizeMetaUpgrades } from "../../meta";
+import { BASE_LEVEL_UP_HEAL, getMetaUpgradeBonus, normalizeMetaUpgrades } from "../../meta";
 import type { PlayerEntity } from "../../types";
 
 export function createPlayer(metaUpgrades?: Parameters<typeof normalizeMetaUpgrades>[0]): PlayerEntity {
@@ -17,6 +17,8 @@ export function createPlayer(metaUpgrades?: Parameters<typeof normalizeMetaUpgra
     contactTimer: 0,
     attackTimer: 0,
     autoAttackTimer: 0,
+    regenTickTimer: 3,
+    lightningTimer: 0,
     facingAngle: 0,
     aimAngle: 0,
     stats: {
@@ -28,13 +30,22 @@ export function createPlayer(metaUpgrades?: Parameters<typeof normalizeMetaUpgra
       pickupRadius: 120,
       projectileSpeed: 620,
       autoTurretCount: 0,
+      autoTurretDamage: 18,
       autoTurretCooldown: 1.44,
       orbitalCount: 0,
       orbitalDamage: 22,
       orbitalRespawn: 1.15,
       orbitalDistance: 92,
       orbitalSpeed: 3.7,
-      hpRegenPerSecond: 0,
+      hpRegenAmount: 0,
+      contactDamageMultiplier: 1,
+      levelUpHeal: BASE_LEVEL_UP_HEAL,
+      lightningDamage: 0,
+      lightningRadius: 0,
+      lightningCooldown: 0,
+      lightningTargetRange: 0,
+      explosionRadius: 0,
+      explosionDamageRatio: 0,
     },
   };
 
@@ -42,12 +53,18 @@ export function createPlayer(metaUpgrades?: Parameters<typeof normalizeMetaUpgra
   const moveSpeedBonus = getMetaUpgradeBonus("baseMoveSpeed", normalizedMeta.baseMoveSpeed);
   const hpBonus = getMetaUpgradeBonus("baseMaxHp", normalizedMeta.baseMaxHp);
   const regenBonus = getMetaUpgradeBonus("autoRegen", normalizedMeta.autoRegen);
+  const pickupBonus = getMetaUpgradeBonus("basePickupRadius", normalizedMeta.basePickupRadius);
+  const armorBonus = getMetaUpgradeBonus("contactArmor", normalizedMeta.contactArmor);
+  const levelUpHealBonus = getMetaUpgradeBonus("levelUpHeal", normalizedMeta.levelUpHeal);
 
   player.stats.projectileDamage += damageBonus;
   player.stats.moveSpeed += moveSpeedBonus;
   player.maxHp += hpBonus;
   player.hp += hpBonus;
-  player.stats.hpRegenPerSecond += regenBonus;
+  player.stats.hpRegenAmount += regenBonus;
+  player.stats.pickupRadius += pickupBonus;
+  player.stats.contactDamageMultiplier *= Math.max(0.55, 1 - armorBonus / 100);
+  player.stats.levelUpHeal += levelUpHealBonus;
 
   return player;
 }

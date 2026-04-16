@@ -20,7 +20,12 @@ export type AudioCueId =
   | "difficultySelect"
   | "startGame"
   | "cheat"
-  | "uiOpen";
+  | "uiOpen"
+  | "bossSkillCharge"
+  | "bossSkillCast"
+  | "bossSummon"
+  | "lightningStrike"
+  | "playerDefeat";
 
 const BGM_TRACKS: Record<BgmTrackId, string[]> = {
   menu: ["/audio/bgm/menu.ogg"],
@@ -47,6 +52,11 @@ const SFX_TRACKS: Record<AudioCueId, string> = {
   startGame: "/audio/sfx/start-game.ogg",
   cheat: "/audio/sfx/cheat.ogg",
   uiOpen: "/audio/sfx/ui-open.ogg",
+  bossSkillCharge: "/audio/sfx/boss-skill-charge.ogg",
+  bossSkillCast: "/audio/sfx/boss-skill-cast.ogg",
+  bossSummon: "/audio/sfx/boss-summon.ogg",
+  lightningStrike: "/audio/sfx/lightning-strike.ogg",
+  playerDefeat: "/audio/sfx/player-defeat.ogg",
 };
 
 const SFX_VOLUME: Record<AudioCueId, number> = {
@@ -63,6 +73,11 @@ const SFX_VOLUME: Record<AudioCueId, number> = {
   startGame: 0.28,
   cheat: 0.3,
   uiOpen: 0.2,
+  bossSkillCharge: 0.24,
+  bossSkillCast: 0.28,
+  bossSummon: 0.26,
+  lightningStrike: 0.3,
+  playerDefeat: 0.34,
 };
 
 const SFX_INTERVAL_MS: Record<AudioCueId, number> = {
@@ -79,6 +94,11 @@ const SFX_INTERVAL_MS: Record<AudioCueId, number> = {
   startGame: 180,
   cheat: 120,
   uiOpen: 100,
+  bossSkillCharge: 120,
+  bossSkillCast: 120,
+  bossSummon: 220,
+  lightningStrike: 180,
+  playerDefeat: 800,
 };
 
 const AUDIO_TEMPLATE_CACHE = new Map<string, HTMLAudioElement>();
@@ -363,6 +383,16 @@ export class GameAudioController {
         this.playCue("levelUp");
       } else if (event.type === "buffReroll") {
         this.playCue("buffReroll");
+      } else if (event.type === "bossSkillCharge") {
+        this.playCue("bossSkillCharge");
+      } else if (event.type === "bossSkillCast") {
+        this.playCue("bossSkillCast");
+      } else if (event.type === "bossSummon") {
+        this.playCue("bossSummon");
+      } else if (event.type === "lightningStrike") {
+        this.playCue("lightningStrike");
+      } else if (event.type === "playerDefeat") {
+        this.playCue("playerDefeat");
       }
     });
   }
