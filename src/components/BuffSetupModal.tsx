@@ -24,7 +24,7 @@ export default function BuffSetupModal({
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
       <section
         aria-modal="true"
-        className="tutorial-modal"
+        className="tutorial-modal modal-run-buffs"
         role="dialog"
         aria-label="自定义本局 Buff"
         onClick={(event) => event.stopPropagation()}
@@ -60,7 +60,7 @@ export default function BuffSetupModal({
                 <span>{upgrade.shortName}</span>
                 <h3>{upgrade.name}</h3>
                 <p>{upgrade.description}</p>
-                <strong>{enabled ? (locked ? "至少保留 3 个" : "已启用") : "已关闭"}</strong>
+                <strong className="buff-card-state">{enabled ? (locked ? "至少保留 3 个" : "已启用") : "已关闭"}</strong>
               </button>
             );
           })}

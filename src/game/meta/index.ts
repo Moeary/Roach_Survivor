@@ -1,7 +1,10 @@
 export {
+  AUTO_REGEN_INTERVAL_SECONDS,
+  BASE_LEVEL_UP_HEAL,
   addGoldenEggs,
   DEFAULT_META_PROFILE,
   EMPTY_META_UPGRADES,
+  getMetaUpgradeBaseLabel,
   getMetaUpgradeBonus,
   getMetaUpgradeBonusLabel,
   getMetaUpgradeCost,

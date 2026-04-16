@@ -13,12 +13,18 @@ export interface MetaUpgradeDefinition {
   costs?: number[];
 }
 
+export const BASE_LEVEL_UP_HEAL = 20;
+export const AUTO_REGEN_INTERVAL_SECONDS = 3;
+
 export const EMPTY_META_UPGRADES: MetaUpgradeLevels = {
   baseDamage: 0,
   baseMoveSpeed: 0,
   baseMaxHp: 0,
   buffRefresh: 0,
   autoRegen: 0,
+  basePickupRadius: 0,
+  contactArmor: 0,
+  levelUpHeal: 0,
 };
 
 export const DEFAULT_META_PROFILE: MetaProfile = {
@@ -74,11 +80,41 @@ export const META_UPGRADE_DEFS: MetaUpgradeDefinition[] = [
     id: "autoRegen",
     name: "自动回血",
     shortName: "回血",
-    description: "战斗中持续自动恢复生命。每级 +1 点/秒，满级 3 点/秒。",
+    description: "每 3 秒触发一次回血。每级多回 1 点，强度更克制但依旧稳定。",
     bonusStep: 1,
-    bonusUnit: "点/秒",
+    bonusUnit: "点/3 秒",
     maxLevel: 3,
     costs: [10, 20, 30],
+  },
+  {
+    id: "basePickupRadius",
+    name: "触须磁场",
+    shortName: "吸附",
+    description: "扩大开局经验吸附范围，更容易滚起前期节奏。",
+    bonusStep: 24,
+    bonusUnit: "拾取范围",
+    maxLevel: 5,
+    costs: [4, 7, 10, 13, 16],
+  },
+  {
+    id: "contactArmor",
+    name: "硬壳镀层",
+    shortName: "减伤",
+    description: "减少受到的接触伤害，方便在虫潮里强行挤位。",
+    bonusStep: 6,
+    bonusUnit: "% 接触减伤",
+    maxLevel: 5,
+    costs: [5, 9, 13, 17, 21],
+  },
+  {
+    id: "levelUpHeal",
+    name: "蜕壳回补",
+    shortName: "升级治疗",
+    description: "默认升级就会回血，继续投资后每次升级回复会越来越高，满级达到 100 点。",
+    bonusStep: 16,
+    bonusUnit: "升级回血",
+    maxLevel: 5,
+    costs: [4, 8, 12, 16, 20],
   },
 ];
 
@@ -95,6 +131,9 @@ export function normalizeMetaUpgrades(metaUpgrades?: Partial<MetaUpgradeLevels>)
     baseMaxHp: Math.min(META_UPGRADE_MAP.get("baseMaxHp")!.maxLevel, clampLevel(metaUpgrades?.baseMaxHp)),
     buffRefresh: Math.min(META_UPGRADE_MAP.get("buffRefresh")!.maxLevel, clampLevel(metaUpgrades?.buffRefresh)),
     autoRegen: Math.min(META_UPGRADE_MAP.get("autoRegen")!.maxLevel, clampLevel(metaUpgrades?.autoRegen)),
+    basePickupRadius: Math.min(META_UPGRADE_MAP.get("basePickupRadius")!.maxLevel, clampLevel(metaUpgrades?.basePickupRadius)),
+    contactArmor: Math.min(META_UPGRADE_MAP.get("contactArmor")!.maxLevel, clampLevel(metaUpgrades?.contactArmor)),
+    levelUpHeal: Math.min(META_UPGRADE_MAP.get("levelUpHeal")!.maxLevel, clampLevel(metaUpgrades?.levelUpHeal)),
   };
 }
 
@@ -142,7 +181,33 @@ export function getMetaUpgradeBonusLabel(upgradeId: MetaUpgradeId, level: number
     return "+0";
   }
 
-  return `+${getMetaUpgradeBonus(upgradeId, level)} ${upgrade.bonusUnit}`;
+  const bonus = getMetaUpgradeBonus(upgradeId, level);
+
+  if (upgradeId === "contactArmor") {
+    return `-${bonus}% 接触伤害`;
+  }
+
+  if (upgradeId === "basePickupRadius") {
+    return `+${bonus} 吸附范围`;
+  }
+
+  if (upgradeId === "levelUpHeal") {
+    return `每次升级回血 ${BASE_LEVEL_UP_HEAL + bonus}`;
+  }
+
+  if (upgradeId === "autoRegen") {
+    return `每 ${AUTO_REGEN_INTERVAL_SECONDS} 秒恢复 ${bonus}`;
+  }
+
+  return `+${bonus} ${upgrade.bonusUnit}`;
+}
+
+export function getMetaUpgradeBaseLabel(upgradeId: MetaUpgradeId): string | null {
+  if (upgradeId === "levelUpHeal") {
+    return `基础每次升级回血 ${BASE_LEVEL_UP_HEAL}`;
+  }
+
+  return null;
 }
 
 export function getMetaUpgradeMaxLevel(upgradeId: MetaUpgradeId): number {

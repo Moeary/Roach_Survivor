@@ -18,8 +18,28 @@ export type DecorationType = "puddle" | "crumb" | "cap" | "drain" | "stain";
 export type ObstacleType = "pipe" | "barrel" | "trash";
 export type PickupType = "xp" | "goldEgg";
 export type ProjectileVariant = "manual" | "auto";
-export type MetaUpgradeId = "baseDamage" | "baseMoveSpeed" | "baseMaxHp" | "buffRefresh" | "autoRegen";
-export type GameEventType = "playerShot" | "enemyDie" | "goldEggGain" | "playerHurt" | "xpGain" | "levelUp" | "buffReroll";
+export type MetaUpgradeId =
+  | "baseDamage"
+  | "baseMoveSpeed"
+  | "baseMaxHp"
+  | "buffRefresh"
+  | "autoRegen"
+  | "basePickupRadius"
+  | "contactArmor"
+  | "levelUpHeal";
+export type GameEventType =
+  | "playerShot"
+  | "enemyDie"
+  | "goldEggGain"
+  | "playerHurt"
+  | "xpGain"
+  | "levelUp"
+  | "buffReroll"
+  | "bossSkillCharge"
+  | "bossSkillCast"
+  | "bossSummon"
+  | "lightningStrike"
+  | "playerDefeat";
 export type UpgradeId =
   | "damage"
   | "attackSpeed"
@@ -28,7 +48,9 @@ export type UpgradeId =
   | "moveSpeed"
   | "pickupRadius"
   | "autoTurret"
-  | "orbitals";
+  | "orbitals"
+  | "lightningStrike"
+  | "burstShell";
 
 export interface InputState {
   up: boolean;
@@ -49,13 +71,22 @@ export interface PlayerStats {
   pickupRadius: number;
   projectileSpeed: number;
   autoTurretCount: number;
+  autoTurretDamage: number;
   autoTurretCooldown: number;
   orbitalCount: number;
   orbitalDamage: number;
   orbitalRespawn: number;
   orbitalDistance: number;
   orbitalSpeed: number;
-  hpRegenPerSecond: number;
+  hpRegenAmount: number;
+  contactDamageMultiplier: number;
+  levelUpHeal: number;
+  lightningDamage: number;
+  lightningRadius: number;
+  lightningCooldown: number;
+  lightningTargetRange: number;
+  explosionRadius: number;
+  explosionDamageRatio: number;
 }
 
 export interface EntityBase {
@@ -76,6 +107,8 @@ export interface PlayerEntity extends EntityBase {
   contactTimer: number;
   attackTimer: number;
   autoAttackTimer: number;
+  regenTickTimer: number;
+  lightningTimer: number;
   facingAngle: number;
   aimAngle: number;
   stats: PlayerStats;
@@ -148,7 +181,7 @@ export interface PickupEntity {
 
 export interface EffectEntity {
   id: string;
-  type: "burst";
+  type: "burst" | "lightning";
   x: number;
   y: number;
   radius: number;
@@ -211,6 +244,9 @@ export interface MetaUpgradeLevels {
   baseMaxHp: number;
   buffRefresh: number;
   autoRegen: number;
+  basePickupRadius: number;
+  contactArmor: number;
+  levelUpHeal: number;
 }
 
 export interface MetaProfile {

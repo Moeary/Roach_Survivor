@@ -7,6 +7,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "v0.9 Build Polish & Balance Pass",
+    date: "2026-04-16",
+    summary: "重排 Buff 弹窗、补齐 Boss 与失败音效入口，并完成一轮局内外成长平衡调整。",
+    items: [
+      "本局 Buff 弹窗重做为更适合桌面端的多列排布，避免 10 个词条时还要长距离滚动。",
+      "新增 Boss 技能蓄力、Boss 技能释放、Boss 召唤、雷击与失败结算的音效事件和占位资源。",
+      "局外升级扩展到 8 项，并将自动回血改为每 3 秒结算一次；升级回血则改成基础存在、最高可堆到每次升级回复 100 点。",
+      "局内升级补上静电巢雷与爆裂卵腔，同时把自动副炮、环绕弹与手动主武器的成长链拆开，减少连锁超模。",
+      "项目当前版本更新为 v0.9。",
+    ],
+  },
+  {
     version: "v0.8 Desktop Release & Deployment Tooling",
     date: "2026-04-13",
     summary: "补上桌面端分发、Docker 部署和站点分析接线，并把当前版本推进到 v0.8。",

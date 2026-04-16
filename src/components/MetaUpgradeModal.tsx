@@ -1,4 +1,4 @@
-import { getMetaUpgradeBonusLabel, getMetaUpgradeCost, getMetaUpgradeMaxLevel, getMetaResetRefund, META_UPGRADE_DEFS } from "../game/meta";
+import { getMetaUpgradeBaseLabel, getMetaUpgradeBonusLabel, getMetaUpgradeCost, getMetaUpgradeMaxLevel, getMetaResetRefund, META_UPGRADE_DEFS } from "../game/meta";
 import type { MetaUpgradeId, MetaUpgradeLevels } from "../game/types";
 
 interface MetaUpgradeModalProps {
@@ -57,6 +57,7 @@ export default function MetaUpgradeModal({
             const cost = getMetaUpgradeCost(upgrade.id, level);
             const isMaxed = level >= maxLevel;
             const affordable = !isMaxed && goldenEggs >= cost;
+            const baseLabel = getMetaUpgradeBaseLabel(upgrade.id);
 
             return (
               <button
@@ -69,6 +70,12 @@ export default function MetaUpgradeModal({
                 <span>{upgrade.shortName}</span>
                 <h3>{upgrade.name}</h3>
                 <p>{upgrade.description}</p>
+                {baseLabel ? (
+                  <div className="meta-stat-line meta-stat-line-muted">
+                    <span>基础</span>
+                    <strong>{baseLabel}</strong>
+                  </div>
+                ) : null}
                 <div className="meta-stat-line">
                   <strong>当前 Lv.{level} / {maxLevel}</strong>
                   <strong>{getMetaUpgradeBonusLabel(upgrade.id, level)}</strong>

@@ -5,7 +5,7 @@ export interface UpgradeDefinition {
   name: string;
   shortName: string;
   description: string;
-  apply: (state: GameState) => void;
+  apply: (state: GameState, currentRank: number) => void;
 }
 
 export const UPGRADE_DEFS: UpgradeDefinition[] = [
@@ -49,27 +49,27 @@ export const UPGRADE_DEFS: UpgradeDefinition[] = [
     id: "moveSpeed",
     name: "惊吓疾跑",
     shortName: "移速",
-    description: "移动速度提升 12%，走位更稳。",
+    description: "移动速度提升 25%，走位和转场都会更轻松。",
     apply(state) {
-      state.player.stats.moveSpeed *= 1.12;
+      state.player.stats.moveSpeed *= 1.25;
     },
   },
   {
     id: "pickupRadius",
     name: "胡须感应",
     shortName: "拾取范围",
-    description: "经验吸附半径扩大 24%。",
+    description: "经验吸附半径每级直接扩大 50%，滚雪球会明显快很多。",
     apply(state) {
-      state.player.stats.pickupRadius *= 1.24;
+      state.player.stats.pickupRadius *= 1.5;
     },
   },
   {
     id: "autoTurret",
     name: "自律喷腺",
     shortName: "自动副炮",
-    description: "额外长出自动喷腺，定期朝最近敌人补射辅助卵鞘。",
-    apply(state) {
-      state.player.stats.autoTurretCount += 1;
+    description: "首点解锁 1 门自动喷腺，后续每级额外 +2 发副炮齐射，并继续缩短循环时间。",
+    apply(state, currentRank) {
+      state.player.stats.autoTurretCount += currentRank === 0 ? 1 : 2;
       state.player.stats.autoTurretCooldown = Math.max(0.46, state.player.stats.autoTurretCooldown * 0.9);
     },
   },
@@ -77,11 +77,48 @@ export const UPGRADE_DEFS: UpgradeDefinition[] = [
     id: "orbitals",
     name: "护卵环",
     shortName: "环绕弹",
-    description: "身边补 1 枚环绕卵鞘，撞到敌人会碎裂并自动补充。",
+    description: "每级直接补 3 枚环绕卵鞘，并略微提高环绕伤害与补充速度。",
     apply(state) {
-      state.player.stats.orbitalCount += 1;
-      state.player.stats.orbitalDamage *= state.player.stats.orbitalCount === 1 ? 1 : 1.12;
-      state.player.stats.orbitalRespawn = Math.max(0.42, state.player.stats.orbitalRespawn * 0.92);
+      state.player.stats.orbitalCount += 3;
+      state.player.stats.orbitalDamage *= 1.08;
+      state.player.stats.orbitalRespawn = Math.max(0.36, state.player.stats.orbitalRespawn * 0.9);
+    },
+  },
+  {
+    id: "lightningStrike",
+    name: "静电巢雷",
+    shortName: "雷击",
+    description: "首点开始自动劈落范围雷击，后续每级继续扩大范围、提高伤害并缩短冷却。",
+    apply(state, currentRank) {
+      if (currentRank === 0) {
+        state.player.stats.lightningDamage = 34;
+        state.player.stats.lightningRadius = 96;
+        state.player.stats.lightningCooldown = 2.6;
+        state.player.stats.lightningTargetRange = 520;
+        state.player.lightningTimer = 0;
+        return;
+      }
+
+      state.player.stats.lightningDamage += 11;
+      state.player.stats.lightningRadius += 28;
+      state.player.stats.lightningCooldown = Math.max(1.05, state.player.stats.lightningCooldown * 0.9);
+      state.player.stats.lightningTargetRange += 48;
+    },
+  },
+  {
+    id: "burstShell",
+    name: "爆裂卵腔",
+    shortName: "爆裂",
+    description: "卵鞘命中或碎裂时引发小范围爆炸。后续每级继续扩大半径并提高溅射比例。",
+    apply(state, currentRank) {
+      if (currentRank === 0) {
+        state.player.stats.explosionRadius = 48;
+        state.player.stats.explosionDamageRatio = 0.55;
+        return;
+      }
+
+      state.player.stats.explosionRadius += 16;
+      state.player.stats.explosionDamageRatio = Math.min(1.25, state.player.stats.explosionDamageRatio + 0.12);
     },
   },
 ];

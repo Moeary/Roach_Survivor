@@ -475,6 +475,11 @@ select {
   width: min(1240px, 100%);
 }
 
+.modal-run-buffs {
+  width: min(1620px, calc(100vw - 48px));
+  padding: 24px 28px 22px;
+}
+
 .modal-compact {
   width: min(760px, 100%);
 }
@@ -508,6 +513,12 @@ select {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   margin-top: 20px;
+}
+
+.modal-run-buffs .buff-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
 }
 
 .buff-card,
@@ -544,6 +555,22 @@ select {
     rgba(255, 255, 255, 0.03);
 }
 
+.modal-run-buffs .buff-card {
+  min-height: 196px;
+  gap: 8px;
+  padding: 16px;
+  align-content: start;
+}
+
+.modal-run-buffs .buff-card h3 {
+  font-size: 1.08rem;
+}
+
+.modal-run-buffs .buff-card p {
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
 .buff-card:disabled,
 .meta-card:disabled {
   cursor: not-allowed;
@@ -574,6 +601,19 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.meta-stat-line-muted span,
+.meta-stat-line-muted strong {
+  color: var(--muted);
+}
+
+.buff-card-state {
+  align-self: end;
+  justify-self: start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .audio-grid {
@@ -1111,6 +1151,10 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .modal-run-buffs .buff-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .hero-panel h1 {
     max-width: none;
   }
@@ -1149,11 +1193,15 @@ select {
   }
 
   .tutorial-grid,
-  .buff-grid,
   .meta-grid,
   .choice-grid,
   .compendium-grid {
     grid-template-columns: 1fr;
+  }
+
+  .buff-grid,
+  .modal-run-buffs .buff-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .buff-modal-head {
@@ -1168,6 +1216,11 @@ select {
   .choice-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .modal-run-buffs {
+    width: min(100%, 980px);
+    padding: 22px;
   }
 
   .hud-top,
@@ -1190,5 +1243,12 @@ select {
   .boss-bar {
     top: 152px;
     width: calc(100vw - 28px);
+  }
+}
+
+@media (max-width: 640px) {
+  .buff-grid,
+  .modal-run-buffs .buff-grid {
+    grid-template-columns: 1fr;
   }
 }

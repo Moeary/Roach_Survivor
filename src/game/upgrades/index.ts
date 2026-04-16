@@ -42,8 +42,9 @@ export function applyUpgrade(state: GameState, upgradeId: UpgradeId): boolean {
     return false;
   }
 
-  upgrade.apply(state);
-  state.upgradeLevels[upgradeId] = (state.upgradeLevels[upgradeId] ?? 0) + 1;
+  const currentRank = state.upgradeLevels[upgradeId] ?? 0;
+  upgrade.apply(state, currentRank);
+  state.upgradeLevels[upgradeId] = currentRank + 1;
   state.upgradesTaken.push(upgradeId);
   state.lastUpgradeName = upgrade.name;
   return true;

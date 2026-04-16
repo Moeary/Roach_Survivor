@@ -1,68 +1,46 @@
-# Audio Assets
+# 音频资源说明
 
-把音频文件放到这个目录下，游戏会按固定文件名自动读取。
+本目录用于存放游戏运行时会直接请求的音频文件。项目已经接好路径约定，只要文件名一致，就可以在不改代码的情况下直接替换为正式素材。
 
-## BGM
+## 目录结构
 
-放到 `public/audio/bgm/`：
+- `bgm/`：循环播放的背景音乐
+- `sfx/`：战斗、UI、升级、Boss 技能等短音效
 
-- `menu.ogg`
-- `victory.ogg`
-- `wave-1.ogg`
-- `boss-1.ogg`
-- `wave-2.ogg`
-- `boss-2.ogg`
-- `wave-3.ogg`
-- `boss-3.ogg`
+## BGM 文件
 
-推荐对应关系：
+- `bgm/menu.ogg`：主菜单循环
+- `bgm/wave-1.ogg`：第一阶段探索战斗
+- `bgm/boss-1.ogg`：第一波 Boss
+- `bgm/wave-2.ogg`：第二阶段探索战斗
+- `bgm/boss-2.ogg`：第二波 Boss
+- `bgm/wave-3.ogg`：第三阶段探索战斗
+- `bgm/boss-3.ogg`：第三波 Boss
+- `bgm/victory.ogg`：通关结算
 
-- `menu.ogg`：主页面循环 BGM
-- `victory.ogg`：胜利结算 BGM
-- `wave-1.ogg`：第一波常规战斗
-- `boss-1.ogg`：第一波 Boss 战
-- `wave-2.ogg`：第二波常规战斗
-- `boss-2.ogg`：第二波 Boss 战
-- `wave-3.ogg`：第三波常规战斗
-- `boss-3.ogg`：第三波 Boss 战
+## SFX 文件
 
-如果暂时没有单独的 Boss 曲目，`boss-1.ogg / boss-2.ogg / boss-3.ogg` 可以先不放。
-当前音频控制器会自动回退到对应的 `wave-1.ogg / wave-2.ogg / wave-3.ogg`，并且不会因为轨道名切换而把同一个文件重复重启。
+- `sfx/player-shot.ogg`：主武器 / 自动副炮发射
+- `sfx/enemy-die.ogg`：普通敌人或 Boss 死亡
+- `sfx/player-hurt.ogg`：主角受击
+- `sfx/xp-gain.ogg`：吸收经验
+- `sfx/gold-egg.ogg`：获得金色卵鞘
+- `sfx/level-up.ogg`：升级弹窗出现
+- `sfx/buff-reroll.ogg`：刷新本局 Buff
+- `sfx/meta-upgrade.ogg`：购买局外升级
+- `sfx/meta-reset.ogg`：重置局外升级
+- `sfx/difficulty-select.ogg`：切换难度
+- `sfx/start-game.ogg`：开始游戏
+- `sfx/ui-open.ogg`：打开任意功能弹窗
+- `sfx/cheat.ogg`：作弊快进或测试入口
+- `sfx/boss-skill-charge.ogg`：Boss 技能前摇 / 蓄力
+- `sfx/boss-skill-cast.ogg`：Boss 技能正式释放
+- `sfx/boss-summon.ogg`：Boss 召唤杂兵或支援 Boss
+- `sfx/lightning-strike.ogg`：静电巢雷触发
+- `sfx/player-defeat.ogg`：主角失败结算
 
-## SFX
+## 占位文件建议
 
-放到 `public/audio/sfx/`：
-
-- `player-shot.ogg`
-- `enemy-die.ogg`
-- `gold-egg.ogg`
-- `player-hurt.ogg`
-- `xp-gain.ogg`
-- `level-up.ogg`
-- `buff-reroll.ogg`
-- `meta-upgrade.ogg`
-- `meta-reset.ogg`
-- `difficulty-select.ogg`
-- `start-game.ogg`
-- `cheat.ogg`
-- `ui-open.ogg`
-
-说明：
-
-- `player-shot.ogg`：主武器和自动副炮发射时播放
-- `enemy-die.ogg`：敌人死亡时播放
-- `gold-egg.ogg`：拾取金色卵鞘时播放
-- `player-hurt.ogg`：主角受伤时播放
-- `xp-gain.ogg`：经验颗粒被吸收时播放
-- `level-up.ogg`：进入升级选择时播放
-- `buff-reroll.ogg`：点击刷新升级词条时播放
-- `meta-upgrade.ogg`：局外升级成功时播放
-- `meta-reset.ogg`：局外重置加点时播放
-- `difficulty-select.ogg`：切换难度时播放
-- `start-game.ogg`：点击开始游戏时播放
-- `cheat.ogg`：点击作弊按钮时播放
-- `ui-open.ogg`：打开教程、日志、Buff 面板、局外成长面板时播放
-
-当前仓库里这批 `public/audio/sfx/*.ogg` 只是占位音效，后续你可以直接用同名文件覆盖，不需要修改代码。
-
-目前实现默认按 `.ogg` 读取。如果你想改成别的扩展名，调整 `src/audio/gameAudio.ts` 里的路径常量即可。
+- 如果暂时没有正式素材，可以先复制一个长度较短的 `.ogg` 作为占位。
+- 代码会在文件缺失时报错后自动跳过该条音效，但为了避免首轮运行出现资源错误，建议占位文件先补齐。
+- 正式替换时只需要覆盖同名文件，不需要改动任何源码。
