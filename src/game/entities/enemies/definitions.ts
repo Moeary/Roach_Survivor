@@ -10,13 +10,16 @@ export const ENEMY_APPEAR_AT: Record<Exclude<EnemyTypeId, "boss">, number> = {
   nymph: 0,
   adult: 0,
   guard: 0,
+  spitter: 0,
   skitter: STAGE_TWO_START_TIME,
   brute: STAGE_TWO_START_TIME,
   stinger: STAGE_TWO_START_TIME,
+  hunter: STAGE_TWO_START_TIME,
   razor: STAGE_THREE_START_TIME,
   carrier: STAGE_THREE_START_TIME,
   behemoth: STAGE_THREE_START_TIME,
   phantom: STAGE_THREE_START_TIME,
+  artillery: STAGE_THREE_START_TIME,
 };
 
 export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
@@ -29,6 +32,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     damage: 5,
     xp: 1,
     tint: "#d6bf80",
+    bloodTint: "#b9c455",
   },
   adult: {
     id: "adult",
@@ -39,6 +43,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     damage: 8,
     xp: 2,
     tint: "#a75e34",
+    bloodTint: "#d07a32",
   },
   guard: {
     id: "guard",
@@ -49,6 +54,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     damage: 12,
     xp: 4,
     tint: "#54372c",
+    bloodTint: "#c67444",
   },
   skitter: {
     id: "skitter",
@@ -59,6 +65,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     damage: 6,
     xp: 3,
     tint: "#c89064",
+    bloodTint: "#e09a52",
   },
   brute: {
     id: "brute",
@@ -69,6 +76,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     damage: 18,
     xp: 6,
     tint: "#7b4c3a",
+    bloodTint: "#c66e40",
   },
   stinger: {
     id: "stinger",
@@ -79,6 +87,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     damage: 12,
     xp: 5,
     tint: "#90462b",
+    bloodTint: "#d27030",
   },
   razor: {
     id: "razor",
@@ -89,6 +98,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     damage: 10,
     xp: 7,
     tint: "#662420",
+    bloodTint: "#a82f26",
   },
   carrier: {
     id: "carrier",
@@ -99,6 +109,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     damage: 16,
     xp: 8,
     tint: "#66713a",
+    bloodTint: "#a0b048",
   },
   behemoth: {
     id: "behemoth",
@@ -109,6 +120,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     damage: 25,
     xp: 11,
     tint: "#3b4038",
+    bloodTint: "#7a8c55",
   },
   phantom: {
     id: "phantom",
@@ -119,6 +131,71 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     damage: 10,
     xp: 7,
     tint: "#7e8998",
+    bloodTint: "#c3b5e3",
+  },
+  spitter: {
+    id: "spitter",
+    name: "喷射虫",
+    radius: 22,
+    hp: 60,
+    speed: 54,
+    damage: 4,
+    xp: 5,
+    tint: "#7a9a4a",
+    bloodTint: "#b5dc50",
+    ranged: {
+      damage: 10,
+      cooldown: 2.2,
+      range: 420,
+      stopDistance: 340,
+      projectileSpeed: 260,
+      projectileLife: 2,
+      projectileRadius: 11,
+      projectileTint: "#c2e060",
+    },
+  },
+  hunter: {
+    id: "hunter",
+    name: "弩尾猎手",
+    radius: 21,
+    hp: 110,
+    speed: 78,
+    damage: 6,
+    xp: 7,
+    tint: "#8b5a9c",
+    bloodTint: "#c27ce2",
+    ranged: {
+      damage: 14,
+      cooldown: 1.6,
+      range: 480,
+      stopDistance: 260,
+      projectileSpeed: 310,
+      projectileLife: 1.8,
+      projectileRadius: 9,
+      projectileTint: "#d79ef2",
+      moveWhileFiring: true,
+    },
+  },
+  artillery: {
+    id: "artillery",
+    name: "爆孢炮手",
+    radius: 32,
+    hp: 210,
+    speed: 42,
+    damage: 10,
+    xp: 12,
+    tint: "#8d2e3c",
+    bloodTint: "#d34a5a",
+    ranged: {
+      damage: 22,
+      cooldown: 2.8,
+      range: 560,
+      stopDistance: 460,
+      projectileSpeed: 220,
+      projectileLife: 3,
+      projectileRadius: 15,
+      projectileTint: "#ff7a5c",
+    },
   },
   boss: {
     id: "boss",
@@ -129,6 +206,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
     damage: 24,
     xp: 0,
     tint: "#7d2035",
+    bloodTint: "#e74a5a",
   },
 };
 
@@ -151,35 +229,41 @@ export function pickEnemyTypeForTime(timer: number): EnemyTypeId {
   if (timer < STAGE_TWO_START_TIME) {
     const intensity = Math.max(0, Math.min(1, timer / STAGE_TWO_START_TIME));
     return rollWeightedEnemy([
-      { id: "nymph", weight: 58 - intensity * 18 },
-      { id: "adult", weight: 28 + intensity * 10 },
-      { id: "guard", weight: 14 + intensity * 8 },
+      { id: "nymph", weight: 54 - intensity * 18 },
+      { id: "adult", weight: 26 + intensity * 10 },
+      { id: "guard", weight: 13 + intensity * 7 },
+      { id: "spitter", weight: 7 + intensity * 3 },
     ]);
   }
 
   if (timer < STAGE_THREE_START_TIME) {
     const intensity = Math.max(0, Math.min(1, (timer - STAGE_TWO_START_TIME) / (STAGE_THREE_START_TIME - STAGE_TWO_START_TIME)));
     return rollWeightedEnemy([
-      { id: "nymph", weight: 16 - intensity * 6 },
-      { id: "adult", weight: 20 - intensity * 5 },
-      { id: "guard", weight: 16 + intensity * 4 },
-      { id: "skitter", weight: 16 + intensity * 6 },
-      { id: "brute", weight: 12 + intensity * 4 },
-      { id: "stinger", weight: 20 + intensity * 5 },
+      { id: "nymph", weight: 14 - intensity * 5 },
+      { id: "adult", weight: 18 - intensity * 4 },
+      { id: "guard", weight: 14 + intensity * 3 },
+      { id: "spitter", weight: 8 },
+      { id: "skitter", weight: 14 + intensity * 6 },
+      { id: "brute", weight: 11 + intensity * 4 },
+      { id: "stinger", weight: 18 + intensity * 5 },
+      { id: "hunter", weight: 6 + intensity * 4 },
     ]);
   }
 
   const intensity = Math.max(0, Math.min(1, (timer - STAGE_THREE_START_TIME) / Math.max(1, FINAL_BOSS_TIME - STAGE_THREE_START_TIME)));
   return rollWeightedEnemy([
-    { id: "nymph", weight: 7 - intensity * 4 },
-    { id: "adult", weight: 8 - intensity * 3 },
-    { id: "guard", weight: 10 },
-    { id: "skitter", weight: 10 },
-    { id: "brute", weight: 10 },
-    { id: "stinger", weight: 13 },
-    { id: "razor", weight: 13 + intensity * 5 },
-    { id: "carrier", weight: 10 + intensity * 4 },
-    { id: "behemoth", weight: 7 + intensity * 5 },
-    { id: "phantom", weight: 12 + intensity * 4 },
+    { id: "nymph", weight: 6 - intensity * 3 },
+    { id: "adult", weight: 7 - intensity * 2 },
+    { id: "guard", weight: 9 },
+    { id: "spitter", weight: 6 },
+    { id: "skitter", weight: 9 },
+    { id: "brute", weight: 9 },
+    { id: "stinger", weight: 11 },
+    { id: "hunter", weight: 8 + intensity * 2 },
+    { id: "razor", weight: 12 + intensity * 4 },
+    { id: "carrier", weight: 9 + intensity * 4 },
+    { id: "behemoth", weight: 6 + intensity * 4 },
+    { id: "phantom", weight: 11 + intensity * 4 },
+    { id: "artillery", weight: 5 + intensity * 4 },
   ]);
 }

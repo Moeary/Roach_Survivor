@@ -11,13 +11,16 @@ export type EnemyTypeId =
   | "carrier"
   | "behemoth"
   | "phantom"
+  | "spitter"
+  | "hunter"
+  | "artillery"
   | "boss";
 export type BossRole = "wave" | "summon";
 export type BossActionState = "chase" | "teleport-windup" | "teleport-recover" | "dash-windup" | "dash-active";
 export type DecorationType = "puddle" | "crumb" | "cap" | "drain" | "stain";
 export type ObstacleType = "pipe" | "barrel" | "trash";
 export type PickupType = "xp" | "goldEgg";
-export type ProjectileVariant = "manual" | "auto";
+export type ProjectileVariant = "manual" | "auto" | "enemyRanged";
 export type MetaUpgradeId =
   | "baseDamage"
   | "baseMoveSpeed"
@@ -58,6 +61,7 @@ export interface InputState {
   left: boolean;
   right: boolean;
   aimActive: boolean;
+  autoAim: boolean;
   pointerScreenX: number;
   pointerScreenY: number;
 }
@@ -114,6 +118,18 @@ export interface PlayerEntity extends EntityBase {
   stats: PlayerStats;
 }
 
+export interface RangedEnemyConfig {
+  damage: number;
+  cooldown: number;
+  range: number;
+  stopDistance: number;
+  projectileSpeed: number;
+  projectileLife: number;
+  projectileRadius: number;
+  projectileTint: string;
+  moveWhileFiring?: boolean;
+}
+
 export interface EnemyEntity extends EntityBase {
   type: EnemyTypeId;
   name: string;
@@ -137,6 +153,7 @@ export interface EnemyEntity extends EntityBase {
   summonTimer?: number;
   summonBurst?: number;
   summonPool?: EnemyTypeId[];
+  rangedTimer?: number;
 }
 
 export interface ProjectileEntity {
@@ -181,7 +198,7 @@ export interface PickupEntity {
 
 export interface EffectEntity {
   id: string;
-  type: "burst" | "lightning";
+  type: "burst" | "lightning" | "splatter" | "blood-pool";
   x: number;
   y: number;
   radius: number;
@@ -189,6 +206,8 @@ export interface EffectEntity {
   alive: boolean;
   age: number;
   duration: number;
+  angle?: number;
+  seed?: number;
 }
 
 export interface Decoration {
@@ -275,6 +294,8 @@ export interface EnemyTypeDefinition {
   damage: number;
   xp: number;
   tint: string;
+  bloodTint: string;
+  ranged?: RangedEnemyConfig;
 }
 
 export interface GameState {
