@@ -344,6 +344,7 @@ export function createInputState(): InputState {
     left: false,
     right: false,
     aimActive: false,
+    autoAim: false,
     pointerScreenX: VIEWPORT_WIDTH / 2,
     pointerScreenY: VIEWPORT_HEIGHT / 2,
   };
@@ -492,7 +493,7 @@ function getNearestEnemy(state: GameState, x: number, y: number, maxDistance?: n
 
 function createEffect(
   state: GameState,
-  effect: Pick<EffectEntity, "x" | "y" | "radius" | "tint"> & Partial<Pick<EffectEntity, "duration" | "type">>,
+  effect: Pick<EffectEntity, "x" | "y" | "radius" | "tint"> & Partial<Pick<EffectEntity, "duration" | "type" | "angle" | "seed">>,
 ): void {
   state.effects.push({
     id: "fx-" + state.nextEffectId,
@@ -504,8 +505,35 @@ function createEffect(
     radius: effect.radius,
     tint: effect.tint,
     type: effect.type ?? "burst",
+    angle: effect.angle,
+    seed: effect.seed,
   });
   state.nextEffectId += 1;
+}
+
+function spawnHitSplatter(state: GameState, enemy: EnemyEntity, x: number, y: number, angle: number): void {
+  const bloodTint = ENEMY_TYPES[enemy.type].bloodTint;
+
+  createEffect(state, {
+    x,
+    y,
+    radius: 18,
+    tint: bloodTint,
+    duration: 0.34,
+    type: "splatter",
+    angle,
+    seed: Math.random(),
+  });
+
+  createEffect(state, {
+    x: x + Math.cos(angle) * 6,
+    y: y + Math.sin(angle) * 6,
+    radius: 14 + Math.random() * 10,
+    tint: bloodTint,
+    duration: 10,
+    type: "blood-pool",
+    seed: Math.random(),
+  });
 }
 
 function gainXp(state: GameState, amount: number): void {
@@ -715,6 +743,7 @@ function spawnEnemy(state: GameState, enemyTypeId: EnemyTypeId, position?: { x: 
     summonTimer: undefined,
     summonBurst: undefined,
     summonPool: undefined,
+    rangedTimer: template.ranged ? template.ranged.cooldown * (0.3 + Math.random() * 0.5) : undefined,
   };
 
   resolveAgainstObstacles(state, enemy, 10);
@@ -1119,7 +1148,17 @@ function updatePlayerMovement(state: GameState, input: InputState, dt: number): 
     player.contactTimer = Math.max(0, player.contactTimer - dt);
   }
 
-  if (input.aimActive) {
+  if (input.autoAim) {
+    const target = getNearestEnemy(state, player.x, player.y);
+
+    if (target) {
+      player.aimAngle = Math.atan2(target.y - player.y, target.x - player.x);
+      player.facingAngle = player.aimAngle;
+    } else if (axisX || axisY) {
+      player.aimAngle = Math.atan2(direction.y, direction.x);
+      player.facingAngle = player.aimAngle;
+    }
+  } else if (input.aimActive) {
     const aimDeltaX = input.pointerScreenX - state.viewport.width / 2;
     const aimDeltaY = input.pointerScreenY - state.viewport.height / 2;
 
@@ -1182,15 +1221,45 @@ function updateEnemies(state: GameState, dt: number): void {
 
     if (!handledBossAction) {
       const direction = normalize(player.x - enemy.x, player.y - enemy.y);
-      const aggression = enemy.type === "boss" ? 1 : 1 + Math.min(0.35, state.timer * 0.0011);
+      const ranged = ENEMY_TYPES[enemy.type].ranged;
 
-      enemy.vx = direction.x * enemy.speed * aggression;
-      enemy.vy = direction.y * enemy.speed * aggression;
-      enemy.x += enemy.vx * dt;
-      enemy.y += enemy.vy * dt;
+      if (ranged) {
+        const distToPlayer = distance(enemy.x, enemy.y, player.x, player.y);
+        const inRange = distToPlayer <= ranged.range;
+        const shouldHalt = !ranged.moveWhileFiring && distToPlayer <= ranged.stopDistance;
+        const speedScale = shouldHalt ? 0 : ranged.moveWhileFiring && inRange ? 0.5 : 1;
 
-      if (!enemy.ignoresObstacles) {
-        resolveAgainstObstacles(state, enemy, 12);
+        enemy.vx = direction.x * enemy.speed * speedScale;
+        enemy.vy = direction.y * enemy.speed * speedScale;
+        enemy.x += enemy.vx * dt;
+        enemy.y += enemy.vy * dt;
+
+        if (!enemy.ignoresObstacles) {
+          resolveAgainstObstacles(state, enemy, 12);
+        }
+
+        if (enemy.rangedTimer === undefined) {
+          enemy.rangedTimer = ranged.cooldown;
+        }
+
+        enemy.rangedTimer -= dt;
+
+        if (inRange && enemy.rangedTimer <= 0) {
+          const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+          spawnEnemyProjectile(state, enemy, angle, ranged);
+          enemy.rangedTimer = ranged.cooldown;
+        }
+      } else {
+        const aggression = enemy.type === "boss" ? 1 : 1 + Math.min(0.35, state.timer * 0.0011);
+
+        enemy.vx = direction.x * enemy.speed * aggression;
+        enemy.vy = direction.y * enemy.speed * aggression;
+        enemy.x += enemy.vx * dt;
+        enemy.y += enemy.vy * dt;
+
+        if (!enemy.ignoresObstacles) {
+          resolveAgainstObstacles(state, enemy, 12);
+        }
       }
     }
 
@@ -1297,6 +1366,35 @@ function spawnProjectile(
   state.nextProjectileId += 1;
 }
 
+function spawnEnemyProjectile(
+  state: GameState,
+  enemy: EnemyEntity,
+  angle: number,
+  ranged: NonNullable<(typeof ENEMY_TYPES)[EnemyTypeId]["ranged"]>,
+): void {
+  const spawnDistance = enemy.radius + 12;
+  const projectile: ProjectileEntity = {
+    id: "projectile-" + state.nextProjectileId,
+    type: "eggcase",
+    variant: "enemyRanged",
+    x: enemy.x + Math.cos(angle) * spawnDistance,
+    y: enemy.y + Math.sin(angle) * spawnDistance,
+    vx: Math.cos(angle) * ranged.projectileSpeed,
+    vy: Math.sin(angle) * ranged.projectileSpeed,
+    radius: ranged.projectileRadius,
+    damage: Math.max(1, Math.round(ranged.damage * state.difficulty.damageMultiplier)),
+    hitsRemaining: 1,
+    life: ranged.projectileLife,
+    angle,
+    tint: ranged.projectileTint,
+    alive: true,
+    hitIds: new Set<string>(),
+  };
+
+  state.projectiles.push(projectile);
+  state.nextProjectileId += 1;
+}
+
 function fireSpread(
   state: GameState,
   angle: number,
@@ -1324,7 +1422,12 @@ function updateManualFire(state: GameState, input: InputState, dt: number): void
   const { player } = state;
   player.attackTimer -= dt;
 
-  if (!input.aimActive && Math.abs(player.vx) < 0.01 && Math.abs(player.vy) < 0.01) {
+  if (!input.aimActive && !input.autoAim && Math.abs(player.vx) < 0.01 && Math.abs(player.vy) < 0.01) {
+    player.attackTimer = 0;
+    return;
+  }
+
+  if (input.autoAim && !getNearestEnemy(state, player.x, player.y)) {
     player.attackTimer = 0;
     return;
   }
@@ -1481,13 +1584,7 @@ function updateOrbitals(state: GameState, dt: number): void {
       orbital.active = false;
       orbital.respawnTimer = state.player.stats.orbitalRespawn;
 
-      createEffect(state, {
-        x: orbital.x,
-        y: orbital.y,
-        radius: 20,
-        tint: enemy.type === "boss" ? "#ff8b9d" : "#f4e89d",
-        duration: 0.2,
-      });
+      spawnHitSplatter(state, enemy, orbital.x, orbital.y, Math.atan2(enemy.y - orbital.y, enemy.x - orbital.x));
 
       if (enemy.hp <= 0) {
         defeatEnemy(state, enemy);
@@ -1571,6 +1668,8 @@ function updateLightningStorm(state: GameState, dt: number): void {
 
       enemy.hp -= strikeDamage;
 
+      spawnHitSplatter(state, enemy, enemy.x, enemy.y, Math.atan2(enemy.y - strikeY, enemy.x - strikeX));
+
       if (enemy.hp <= 0) {
         defeatEnemy(state, enemy);
       }
@@ -1615,6 +1714,8 @@ function explodeProjectile(state: GameState, projectile: ProjectileEntity, x: nu
 
     enemy.hp -= damage;
 
+    spawnHitSplatter(state, enemy, enemy.x, enemy.y, Math.atan2(enemy.y - y, enemy.x - x));
+
     if (enemy.hp <= 0) {
       defeatEnemy(state, enemy);
     }
@@ -1634,6 +1735,8 @@ function projectileHitsObstacle(projectile: ProjectileEntity, obstacles: Obstacl
 }
 
 function updateProjectiles(state: GameState, dt: number): void {
+  const { player } = state;
+
   state.projectiles.forEach((projectile) => {
     if (!projectile.alive) {
       return;
@@ -1662,6 +1765,33 @@ function updateProjectiles(state: GameState, dt: number): void {
       return;
     }
 
+    if (projectile.variant === "enemyRanged") {
+      if (!player.alive) {
+        return;
+      }
+
+      if (distance(projectile.x, projectile.y, player.x, player.y) > projectile.radius + player.radius) {
+        return;
+      }
+
+      if (player.contactTimer <= 0 && player.hp > 0) {
+        const damage = projectile.damage * player.stats.contactDamageMultiplier;
+        player.hp = Math.max(0, player.hp - damage);
+        player.contactTimer = CONTACT_COOLDOWN;
+        queueGameEvent(state, "playerHurt", Number(damage.toFixed(1)));
+      }
+
+      projectile.alive = false;
+      createEffect(state, {
+        x: projectile.x,
+        y: projectile.y,
+        radius: 18,
+        tint: projectile.tint,
+        duration: 0.22,
+      });
+      return;
+    }
+
     for (const enemy of state.enemies) {
       if (!enemy.alive || projectile.hitIds.has(enemy.id)) {
         continue;
@@ -1675,13 +1805,7 @@ function updateProjectiles(state: GameState, dt: number): void {
       enemy.hp -= projectile.damage;
       projectile.hitsRemaining -= 1;
 
-      createEffect(state, {
-        x: projectile.x,
-        y: projectile.y,
-        radius: 16,
-        tint: enemy.type === "boss" ? "#ff6f7e" : "#f2db83",
-        duration: 0.18,
-      });
+      spawnHitSplatter(state, enemy, projectile.x, projectile.y, projectile.angle);
 
       if (enemy.hp <= 0) {
         defeatEnemy(state, enemy);

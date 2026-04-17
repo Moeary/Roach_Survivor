@@ -240,6 +240,13 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
         return;
       }
 
+      if (code === "KeyF" && !event.repeat) {
+        event.preventDefault();
+        inputRef.current.autoAim = !inputRef.current.autoAim;
+        refresh();
+        return;
+      }
+
       if (code === "KeyP" && !event.repeat) {
         event.preventDefault();
         if (togglePause(state)) {
@@ -349,6 +356,8 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
   const visibleProjectiles = state.projectiles.filter((projectile) => isVisible(projectile.x, projectile.y, projectile.radius, state, 120));
   const visibleOrbitals = state.orbitals.filter((orbital) => isVisible(orbital.x, orbital.y, orbital.radius, state, 80));
   const visibleEffects = state.effects.filter((effect) => isVisible(effect.x, effect.y, effect.radius * 2, state, 160));
+  const groundEffects = visibleEffects.filter((effect) => effect.type === "blood-pool");
+  const overlayEffects = visibleEffects.filter((effect) => effect.type !== "blood-pool");
 
   return (
     <main className={`game-screen ${input.aimActive ? "game-screen-aiming" : ""}`}>
@@ -377,6 +386,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
           <g>
             <MapBackdrop camera={camera} decorations={visibleDecorations} map={state.map} />
           </g>
+          <g>{groundEffects.map((effect) => <EffectSprite key={effect.id} effect={effect} />)}</g>
           <g>{visibleObstacles.map((obstacle) => <ObstacleSprite key={obstacle.id} obstacle={obstacle} />)}</g>
           <g>{visiblePickups.map((pickup) => <PickupSprite key={pickup.id} pickup={pickup} />)}</g>
           <g><BossTelegraphs enemies={visibleEnemies} state={state} /></g>
@@ -385,12 +395,12 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
           <g>{visibleOrbitals.map((orbital) => <OrbitalSprite key={orbital.id} orbital={orbital} />)}</g>
           <g><PlayerSprite player={state.player} /></g>
           <g><AimReticle state={state} input={input} /></g>
-          <g>{visibleEffects.map((effect) => <EffectSprite key={effect.id} effect={effect} />)}</g>
+          <g>{overlayEffects.map((effect) => <EffectSprite key={effect.id} effect={effect} />)}</g>
         </g>
       </svg>
 
-      {!input.aimActive && state.runState === "running" ? (
-        <div className="aim-hint">把鼠标移进战场接管瞄准，按 Esc 释放。</div>
+      {!input.aimActive && !input.autoAim && state.runState === "running" ? (
+        <div className="aim-hint">把鼠标移进战场接管瞄准，按 Esc 释放。按 F 切换自瞄。</div>
       ) : null}
 
       <div className="hud-top">
@@ -413,7 +423,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
           </div>
           <div className="hud-pill">
             <span>瞄准</span>
-            <strong>{input.aimActive ? "鼠标接管中" : "等待接管"}</strong>
+            <strong>{input.autoAim ? "自瞄锁定" : input.aimActive ? "鼠标接管中" : "等待接管"}</strong>
           </div>
           <div className="hud-pill">
             <span>难度</span>
@@ -437,7 +447,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
             目标
           </button>
           <strong>{targetText}</strong>
-          <em>Esc 释放瞄准 / P 暂停</em>
+          <em>F 自瞄 / Esc 释放鼠标 / P 暂停</em>
         </div>
       </div>
 
