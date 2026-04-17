@@ -44,3 +44,28 @@
 - 如果暂时没有正式素材，可以先复制一个长度较短的 `.ogg` 作为占位。
 - 代码会在文件缺失时报错后自动跳过该条音效，但为了避免首轮运行出现资源错误，建议占位文件先补齐。
 - 正式替换时只需要覆盖同名文件，不需要改动任何源码。
+
+## 2026-04-17 SFX 替换记录
+
+- 来源站点：Mixkit
+- 许可页：[Mixkit License](https://mixkit.co/license/)
+- 说明：本次替换用于项目内游戏音效，不单独再分发源文件。
+
+- `sfx/ui-open.ogg`
+  来源：`Opening software interface`
+  下载页：`https://mixkit.co/free-sound-effects/download/2578/?context=item+grid`
+- `sfx/boss-skill-charge.ogg`
+  来源：`Monster calm growl`
+  下载页：`https://mixkit.co/free-sound-effects/download/1956/?context=item+grid`
+- `sfx/boss-skill-cast.ogg`
+  来源：`Heavy electric shockwave impact`
+  下载页：`https://mixkit.co/free-sound-effects/download/2599/?context=item+grid`
+- `sfx/boss-summon.ogg`
+  来源：`Giant monster roar`
+  下载页：`https://mixkit.co/free-sound-effects/download/1972/?context=item+grid`
+- `sfx/lightning-strike.ogg`
+  来源：`Electricity lightning blast`
+  下载页：`https://mixkit.co/free-sound-effects/download/2601/?context=item+grid`
+- `sfx/player-defeat.ogg`
+  来源：`Spooky game over`
+  下载页：`https://mixkit.co/free-sound-effects/download/1948/?context=item+grid`

@@ -530,7 +530,7 @@ function spawnHitSplatter(state: GameState, enemy: EnemyEntity, x: number, y: nu
     y: y + Math.sin(angle) * 6,
     radius: 14 + Math.random() * 10,
     tint: bloodTint,
-    duration: 10,
+    duration: 5,
     type: "blood-pool",
     seed: Math.random(),
   });
@@ -1775,7 +1775,7 @@ function updateProjectiles(state: GameState, dt: number): void {
       }
 
       if (player.contactTimer <= 0 && player.hp > 0) {
-        const damage = projectile.damage * player.stats.contactDamageMultiplier;
+        const damage = projectile.damage;
         player.hp = Math.max(0, player.hp - damage);
         player.contactTimer = CONTACT_COOLDOWN;
         queueGameEvent(state, "playerHurt", Number(damage.toFixed(1)));

@@ -2,6 +2,7 @@ node_modules/
 dist/
 release/
 
+
 *.tsbuildinfo
 *.log
 npm-debug.log*
@@ -11,6 +12,7 @@ Thumbs.db
 
 .vscode/
 .idea/
+.codex-temp/
 
 docs/*
 public/audio/**/*.mp3
