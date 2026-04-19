@@ -1,5 +1,6 @@
 ﻿import { useEffect, useRef, useState } from "react";
 import {
+  chooseRelic,
   chooseUpgrade,
   createGameState,
   createInputState,
@@ -14,6 +15,7 @@ import {
   togglePause,
   updateGame,
 } from "../game/core";
+import { RELIC_DEFS } from "../game/relics";
 import { getBossWaveTime } from "../game/stages";
 import { GameAudioController, getBgmTrackForState, type AudioSettings } from "../audio/gameAudio";
 import { summarizeUpgrades } from "../game/upgrades";
@@ -156,6 +158,22 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
     return didChoose;
   }
 
+  function chooseRelicByIndex(index: number) {
+    const choice = stateRef.current.relicChoices[index];
+
+    if (!choice) {
+      return false;
+    }
+
+    const didChoose = chooseRelic(stateRef.current, choice.id);
+
+    if (didChoose) {
+      refresh();
+    }
+
+    return didChoose;
+  }
+
   function rerollChoices() {
     const didRefresh = refreshUpgradeChoices(stateRef.current);
 
@@ -253,6 +271,12 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
           refresh();
         }
         return;
+      }
+
+      if (state.runState === "relicChoice" && !event.repeat) {
+        if (code === "Digit1") { event.preventDefault(); chooseRelicByIndex(0); return; }
+        if (code === "Digit2") { event.preventDefault(); chooseRelicByIndex(1); return; }
+        if (code === "Digit3") { event.preventDefault(); chooseRelicByIndex(2); return; }
       }
 
       if (state.runState === "levelup" && !event.repeat) {
@@ -508,6 +532,18 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
               <span className="build-chip build-chip-muted">暂未变异</span>
             )}
           </div>
+          {state.relics.length > 0 ? (
+            <div className="relic-chip-row">
+              {state.relics.map((relicId) => {
+                const def = RELIC_DEFS.find((r) => r.id === relicId);
+                return def ? (
+                  <span key={relicId} className={`relic-chip relic-chip-${def.category}`} title={def.description}>
+                    {def.name}
+                  </span>
+                ) : null;
+              })}
+            </div>
+          ) : null}
         </section>
       </div>
 
@@ -540,6 +576,24 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
               </>
             ) : null}
 
+            {state.runState === "relicChoice" ? (
+              <>
+                <p className="menu-eyebrow">RELIC</p>
+                <h2>发现了古老的遗物</h2>
+                <p className="overlay-copy">选择一件遗物，它将伴随你这一整局。</p>
+                <div className="choice-grid">
+                  {state.relicChoices.map((choice, index) => (
+                    <button key={choice.id} className="choice-card relic-card" type="button" onClick={() => chooseRelicByIndex(index)}>
+                      <span className="choice-hotkey">{index + 1}</span>
+                      <span className={`relic-category relic-category-${choice.category}`}>{choice.category === "offensive" ? "进攻" : choice.category === "defensive" ? "防御" : choice.category === "utility" ? "功能" : "风险"}</span>
+                      <h3>{choice.name}</h3>
+                      <p>{choice.description}</p>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
             {state.runState === "paused" ? (
               <>
                 <p className="menu-eyebrow">PAUSED</p>
@@ -564,6 +618,16 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
                 <p className="menu-eyebrow">VICTORY</p>
                 <h2>整片母巢被你轰穿了</h2>
                 <p className="overlay-copy">你撑过了 {formatTime(state.runDuration)}，并清掉了 {state.difficulty.bossWaves} 波 Boss，整个污水区都被你打成了空壳。</p>
+                <div className="stats-grid">
+                  <div className="stats-item"><span>存活时间</span><strong>{formatTime(state.timer)}</strong></div>
+                  <div className="stats-item"><span>击杀总数</span><strong>{state.sessionStats.kills}</strong></div>
+                  <div className="stats-item"><span>Boss 击败</span><strong>{state.sessionStats.bossesDefeated}</strong></div>
+                  <div className="stats-item"><span>最高等级</span><strong>Lv.{state.sessionStats.peakLevel}</strong></div>
+                  <div className="stats-item"><span>造成伤害</span><strong>{Math.round(state.sessionStats.damageDealt).toLocaleString()}</strong></div>
+                  <div className="stats-item"><span>承受伤害</span><strong>{Math.round(state.sessionStats.damageTaken).toLocaleString()}</strong></div>
+                  <div className="stats-item"><span>弹丸发射</span><strong>{state.sessionStats.projectilesFired}</strong></div>
+                  <div className="stats-item"><span>金色卵鞘</span><strong>{state.runGoldenEggsCollected}</strong></div>
+                </div>
                 <div className="modal-actions">
                   <button className="button-primary" type="button" onClick={restartRun}>
                     再来一局
@@ -580,6 +644,16 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
                 <p className="menu-eyebrow">DEFEAT</p>
                 <h2>你被虫潮啃穿了</h2>
                 <p className="overlay-copy">这次走位没顶住。下一局试试更早拿攻速、移速、自动副炮或者环绕弹。</p>
+                <div className="stats-grid">
+                  <div className="stats-item"><span>存活时间</span><strong>{formatTime(state.timer)}</strong></div>
+                  <div className="stats-item"><span>击杀总数</span><strong>{state.sessionStats.kills}</strong></div>
+                  <div className="stats-item"><span>Boss 击败</span><strong>{state.sessionStats.bossesDefeated}</strong></div>
+                  <div className="stats-item"><span>最高等级</span><strong>Lv.{state.sessionStats.peakLevel}</strong></div>
+                  <div className="stats-item"><span>造成伤害</span><strong>{Math.round(state.sessionStats.damageDealt).toLocaleString()}</strong></div>
+                  <div className="stats-item"><span>承受伤害</span><strong>{Math.round(state.sessionStats.damageTaken).toLocaleString()}</strong></div>
+                  <div className="stats-item"><span>弹丸发射</span><strong>{state.sessionStats.projectilesFired}</strong></div>
+                  <div className="stats-item"><span>金色卵鞘</span><strong>{state.runGoldenEggsCollected}</strong></div>
+                </div>
                 <div className="modal-actions">
                   <button className="button-primary" type="button" onClick={restartRun}>
                     重新孵化

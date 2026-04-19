@@ -1,4 +1,4 @@
-export type RunState = "running" | "paused" | "levelup" | "won" | "lost";
+export type RunState = "running" | "paused" | "levelup" | "relicChoice" | "won" | "lost";
 export type DifficultyId = "easy" | "normal" | "hard";
 export type EnemyTypeId =
   | "nymph"
@@ -42,7 +42,39 @@ export type GameEventType =
   | "bossSkillCast"
   | "bossSummon"
   | "lightningStrike"
-  | "playerDefeat";
+  | "playerDefeat"
+  | "statusApplied"
+  | "relicGained";
+
+export type StatusEffectType = "slow" | "poison";
+
+export interface StatusEffect {
+  type: StatusEffectType;
+  remaining: number;
+  magnitude: number;
+  tickTimer?: number;
+}
+export type RelicId =
+  | "ricochet"
+  | "critGland"
+  | "chainSpore"
+  | "frenzyGland"
+  | "bloodthirst"
+  | "thickSkin"
+  | "stressDodge"
+  | "magnetTendril"
+  | "speedPheromone"
+  | "doubleHatch"
+  | "glassCannon"
+  | "deathRage";
+
+export interface RelicChoice {
+  id: RelicId;
+  name: string;
+  description: string;
+  category: string;
+}
+
 export type UpgradeId =
   | "damage"
   | "attackSpeed"
@@ -53,7 +85,9 @@ export type UpgradeId =
   | "autoTurret"
   | "orbitals"
   | "lightningStrike"
-  | "burstShell";
+  | "burstShell"
+  | "frostEgg"
+  | "corrosiveGland";
 
 export interface InputState {
   up: boolean;
@@ -91,6 +125,10 @@ export interface PlayerStats {
   lightningTargetRange: number;
   explosionRadius: number;
   explosionDamageRatio: number;
+  slowAmount: number;
+  slowDuration: number;
+  poisonDps: number;
+  poisonDuration: number;
 }
 
 export interface EntityBase {
@@ -115,6 +153,7 @@ export interface PlayerEntity extends EntityBase {
   lightningTimer: number;
   facingAngle: number;
   aimAngle: number;
+  speedBuffTimer: number;
   stats: PlayerStats;
 }
 
@@ -154,6 +193,7 @@ export interface EnemyEntity extends EntityBase {
   summonBurst?: number;
   summonPool?: EnemyTypeId[];
   rangedTimer?: number;
+  statusEffects: StatusEffect[];
 }
 
 export interface ProjectileEntity {
@@ -344,8 +384,16 @@ export interface GameState {
   nextOrbitalId: number;
   nextPickupId: number;
   nextEffectId: number;
+  sessionStats: SessionStats;
+  relics: RelicId[];
+  relicChoices: RelicChoice[];
 }
 
 export interface SessionStats {
   kills: number;
+  damageDealt: number;
+  damageTaken: number;
+  projectilesFired: number;
+  bossesDefeated: number;
+  peakLevel: number;
 }

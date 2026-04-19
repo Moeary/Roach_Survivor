@@ -87,6 +87,7 @@ function createPreviewEnemy(
     summonTimer: undefined,
     summonBurst: undefined,
     summonPool: undefined,
+    statusEffects: [],
   };
 }
 

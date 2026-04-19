@@ -21,6 +21,7 @@ export function createPlayer(metaUpgrades?: Parameters<typeof normalizeMetaUpgra
     lightningTimer: 0,
     facingAngle: 0,
     aimAngle: 0,
+    speedBuffTimer: 0,
     stats: {
       moveSpeed: 292,
       projectileDamage: 26,
@@ -46,6 +47,10 @@ export function createPlayer(metaUpgrades?: Parameters<typeof normalizeMetaUpgra
       lightningTargetRange: 0,
       explosionRadius: 0,
       explosionDamageRatio: 0,
+      slowAmount: 0,
+      slowDuration: 0,
+      poisonDps: 0,
+      poisonDuration: 0,
     },
   };
 

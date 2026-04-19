@@ -326,6 +326,80 @@ select {
 }
 
 .hero-actions,
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 24px;
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 12px;
+  border: 1px solid rgba(214, 239, 109, 0.1);
+}
+
+.stats-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.stats-item span {
+  color: rgba(214, 239, 109, 0.6);
+  font-size: 13px;
+}
+
+.stats-item strong {
+  color: #d6ef6d;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.relic-card {
+  border-color: rgba(180, 140, 255, 0.3) !important;
+}
+
+.relic-card:hover {
+  border-color: rgba(180, 140, 255, 0.7) !important;
+}
+
+.relic-category {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.relic-category-offensive { background: rgba(255, 100, 80, 0.25); color: #ff9a7a; }
+.relic-category-defensive { background: rgba(80, 180, 255, 0.25); color: #7ac8ff; }
+.relic-category-utility { background: rgba(100, 220, 100, 0.25); color: #88ee88; }
+.relic-category-risk { background: rgba(255, 200, 60, 0.25); color: #ffd866; }
+
+.relic-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(214, 239, 109, 0.08);
+}
+
+.relic-chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(180, 140, 255, 0.3);
+  color: rgba(220, 200, 255, 0.9);
+  background: rgba(120, 80, 200, 0.15);
+}
+
+.relic-chip-offensive { border-color: rgba(255, 100, 80, 0.3); color: #ff9a7a; background: rgba(255, 80, 60, 0.1); }
+.relic-chip-defensive { border-color: rgba(80, 180, 255, 0.3); color: #7ac8ff; background: rgba(60, 140, 255, 0.1); }
+.relic-chip-utility { border-color: rgba(100, 220, 100, 0.3); color: #88ee88; background: rgba(60, 200, 60, 0.1); }
+.relic-chip-risk { border-color: rgba(255, 200, 60, 0.3); color: #ffd866; background: rgba(255, 180, 40, 0.1); }
+
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
