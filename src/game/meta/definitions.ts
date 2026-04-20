@@ -1,4 +1,4 @@
-import type { MetaProfile, MetaUpgradeId, MetaUpgradeLevels } from "../types";
+import type { MetaProfile, MetaUpgradeId, MetaUpgradeLevels, PlayerSkinId } from "../types";
 
 export interface MetaUpgradeDefinition {
   id: MetaUpgradeId;
@@ -13,8 +13,18 @@ export interface MetaUpgradeDefinition {
   costs?: number[];
 }
 
+export interface PlayerSkinDefinition {
+  id: PlayerSkinId;
+  name: string;
+  shortName: string;
+  description: string;
+  flavor: string;
+  cost: number;
+}
+
 export const BASE_LEVEL_UP_HEAL = 20;
 export const AUTO_REGEN_INTERVAL_SECONDS = 3;
+export const DEFAULT_PLAYER_SKIN_ID: PlayerSkinId = "labStandard";
 
 export const EMPTY_META_UPGRADES: MetaUpgradeLevels = {
   baseDamage: 0,
@@ -27,9 +37,30 @@ export const EMPTY_META_UPGRADES: MetaUpgradeLevels = {
   levelUpHeal: 0,
 };
 
+export const PLAYER_SKIN_DEFS: PlayerSkinDefinition[] = [
+  {
+    id: "labStandard",
+    name: "实验室基础体",
+    shortName: "基础体",
+    description: "默认蟑螂皮肤，圆脸、硬壳、看起来像刚从培养皿里爬出来的吉祥物。",
+    flavor: "广东人的神必实验室最稳定的一号样本。",
+    cost: 0,
+  },
+  {
+    id: "pickleReporter",
+    name: "腌黄瓜战地记者",
+    shortName: "黄瓜记者",
+    description: "受图五启发的改造型皮肤，黄瓜本体配临时拼装义肢和拍摄装备，气质非常神必。",
+    flavor: "别问实验报告，问就是外勤拍到了素材。",
+    cost: 128,
+  },
+];
+
 export const DEFAULT_META_PROFILE: MetaProfile = {
   goldenEggs: 0,
   metaUpgrades: { ...EMPTY_META_UPGRADES },
+  unlockedSkinIds: [DEFAULT_PLAYER_SKIN_ID],
+  selectedSkinId: DEFAULT_PLAYER_SKIN_ID,
 };
 
 export const META_UPGRADE_DEFS: MetaUpgradeDefinition[] = [
@@ -119,9 +150,27 @@ export const META_UPGRADE_DEFS: MetaUpgradeDefinition[] = [
 ];
 
 const META_UPGRADE_MAP = new Map<MetaUpgradeId, MetaUpgradeDefinition>(META_UPGRADE_DEFS.map((upgrade) => [upgrade.id, upgrade]));
+const PLAYER_SKIN_MAP = new Map<PlayerSkinId, PlayerSkinDefinition>(PLAYER_SKIN_DEFS.map((skin) => [skin.id, skin]));
+const PLAYER_SKIN_ID_SET = new Set<PlayerSkinId>(PLAYER_SKIN_DEFS.map((skin) => skin.id));
 
 function clampLevel(level: number | undefined): number {
   return Math.max(0, Math.floor(level ?? 0));
+}
+
+function isPlayerSkinId(value: unknown): value is PlayerSkinId {
+  return typeof value === "string" && PLAYER_SKIN_ID_SET.has(value as PlayerSkinId);
+}
+
+function normalizeUnlockedSkinIds(skinIds?: PlayerSkinId[]): PlayerSkinId[] {
+  const ownedSkinIds = new Set<PlayerSkinId>([DEFAULT_PLAYER_SKIN_ID]);
+
+  skinIds?.forEach((skinId) => {
+    if (isPlayerSkinId(skinId)) {
+      ownedSkinIds.add(skinId);
+    }
+  });
+
+  return PLAYER_SKIN_DEFS.map((skin) => skin.id).filter((skinId) => ownedSkinIds.has(skinId));
 }
 
 export function normalizeMetaUpgrades(metaUpgrades?: Partial<MetaUpgradeLevels>): MetaUpgradeLevels {
@@ -138,10 +187,23 @@ export function normalizeMetaUpgrades(metaUpgrades?: Partial<MetaUpgradeLevels>)
 }
 
 export function normalizeMetaProfile(profile?: Partial<MetaProfile>): MetaProfile {
+  const unlockedSkinIds = normalizeUnlockedSkinIds(profile?.unlockedSkinIds);
+  const selectedSkinId = isPlayerSkinId(profile?.selectedSkinId) ? profile.selectedSkinId : DEFAULT_PLAYER_SKIN_ID;
+
   return {
     goldenEggs: Math.max(0, Math.floor(profile?.goldenEggs ?? 0)),
     metaUpgrades: normalizeMetaUpgrades(profile?.metaUpgrades),
+    unlockedSkinIds,
+    selectedSkinId: unlockedSkinIds.includes(selectedSkinId) ? selectedSkinId : DEFAULT_PLAYER_SKIN_ID,
   };
+}
+
+export function getPlayerSkinDefinition(skinId: PlayerSkinId): PlayerSkinDefinition {
+  return PLAYER_SKIN_MAP.get(skinId) ?? PLAYER_SKIN_MAP.get(DEFAULT_PLAYER_SKIN_ID)!;
+}
+
+export function isPlayerSkinOwned(profile: MetaProfile, skinId: PlayerSkinId): boolean {
+  return normalizeMetaProfile(profile).unlockedSkinIds.includes(skinId);
 }
 
 export function getMetaUpgradeCost(upgradeId: MetaUpgradeId, currentLevel: number): number {
@@ -224,7 +286,7 @@ export function getMetaUpgradeSpentCost(upgradeId: MetaUpgradeId, level: number)
   return Number.isFinite(total) ? total : 0;
 }
 
-export function getMetaResetRefund(profile: MetaProfile): number {
+export function getMetaResetRefund(profile: Pick<MetaProfile, "goldenEggs" | "metaUpgrades"> & Partial<MetaProfile>): number {
   const normalized = normalizeMetaProfile(profile);
 
   return META_UPGRADE_DEFS.reduce((total, upgrade) => total + getMetaUpgradeSpentCost(upgrade.id, normalized.metaUpgrades[upgrade.id]), 0);
@@ -235,6 +297,8 @@ export function addGoldenEggs(profile: MetaProfile, amount: number): MetaProfile
   return {
     goldenEggs: normalized.goldenEggs + Math.max(0, Math.floor(amount)),
     metaUpgrades: normalized.metaUpgrades,
+    unlockedSkinIds: normalized.unlockedSkinIds,
+    selectedSkinId: normalized.selectedSkinId,
   };
 }
 
@@ -259,6 +323,8 @@ export function purchaseMetaUpgrade(profile: MetaProfile, upgradeId: MetaUpgrade
       ...normalized.metaUpgrades,
       [upgradeId]: currentLevel + 1,
     },
+    unlockedSkinIds: normalized.unlockedSkinIds,
+    selectedSkinId: normalized.selectedSkinId,
   };
 }
 
@@ -273,5 +339,53 @@ export function resetMetaUpgrades(profile: MetaProfile): MetaProfile | null {
   return {
     goldenEggs: normalized.goldenEggs - 1 + refund,
     metaUpgrades: { ...EMPTY_META_UPGRADES },
+    unlockedSkinIds: normalized.unlockedSkinIds,
+    selectedSkinId: normalized.selectedSkinId,
+  };
+}
+
+export function purchasePlayerSkin(profile: MetaProfile, skinId: PlayerSkinId): MetaProfile | null {
+  const normalized = normalizeMetaProfile(profile);
+  const skin = PLAYER_SKIN_MAP.get(skinId);
+
+  if (!skin) {
+    return null;
+  }
+
+  if (normalized.unlockedSkinIds.includes(skinId)) {
+    return normalized.selectedSkinId === skinId
+      ? null
+      : {
+          goldenEggs: normalized.goldenEggs,
+          metaUpgrades: normalized.metaUpgrades,
+          unlockedSkinIds: normalized.unlockedSkinIds,
+          selectedSkinId: skinId,
+        };
+  }
+
+  if (normalized.goldenEggs < skin.cost) {
+    return null;
+  }
+
+  return {
+    goldenEggs: normalized.goldenEggs - skin.cost,
+    metaUpgrades: normalized.metaUpgrades,
+    unlockedSkinIds: [...normalized.unlockedSkinIds, skinId],
+    selectedSkinId: skinId,
+  };
+}
+
+export function selectPlayerSkin(profile: MetaProfile, skinId: PlayerSkinId): MetaProfile | null {
+  const normalized = normalizeMetaProfile(profile);
+
+  if (!normalized.unlockedSkinIds.includes(skinId) || normalized.selectedSkinId === skinId) {
+    return null;
+  }
+
+  return {
+    goldenEggs: normalized.goldenEggs,
+    metaUpgrades: normalized.metaUpgrades,
+    unlockedSkinIds: normalized.unlockedSkinIds,
+    selectedSkinId: skinId,
   };
 }

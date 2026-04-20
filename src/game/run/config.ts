@@ -1,7 +1,7 @@
-import { EMPTY_META_UPGRADES, normalizeMetaUpgrades } from "../meta";
+import { DEFAULT_PLAYER_SKIN_ID, EMPTY_META_UPGRADES, normalizeMetaUpgrades } from "../meta";
 import { getRunDurationForBossWaves } from "../stages";
 import { UPGRADE_DEFS } from "../upgrades";
-import type { DifficultyConfig, DifficultyId, RunSetup, UpgradeId } from "../types";
+import type { DifficultyConfig, DifficultyId, PlayerSkinId, RunSetup, UpgradeId } from "../types";
 
 export const DIFFICULTY_ORDER: DifficultyId[] = ["easy", "normal", "hard"];
 
@@ -47,7 +47,12 @@ export const DEFAULT_RUN_SETUP: RunSetup = {
   difficultyId: "easy",
   enabledUpgrades: ALL_UPGRADE_IDS,
   metaUpgrades: EMPTY_META_UPGRADES,
+  selectedSkinId: DEFAULT_PLAYER_SKIN_ID,
 };
+
+function isPlayerSkinId(value: unknown): value is PlayerSkinId {
+  return value === "labStandard" || value === "pickleReporter";
+}
 
 export function getDifficultyConfig(difficultyId: DifficultyId): DifficultyConfig {
   return DIFFICULTY_CONFIGS[difficultyId];
@@ -59,5 +64,6 @@ export function normalizeRunSetup(setup?: Partial<RunSetup>): RunSetup {
     difficultyId: setup?.difficultyId ?? DEFAULT_RUN_SETUP.difficultyId,
     enabledUpgrades: selected.length >= 3 ? selected : ALL_UPGRADE_IDS,
     metaUpgrades: normalizeMetaUpgrades(setup?.metaUpgrades),
+    selectedSkinId: isPlayerSkinId(setup?.selectedSkinId) ? setup.selectedSkinId : DEFAULT_RUN_SETUP.selectedSkinId,
   };
 }

@@ -30,6 +30,7 @@ export type MetaUpgradeId =
   | "basePickupRadius"
   | "contactArmor"
   | "levelUpHeal";
+export type PlayerSkinId = "labStandard" | "pickleReporter";
 export type GameEventType =
   | "playerShot"
   | "enemyDie"
@@ -316,6 +317,8 @@ export interface MetaUpgradeLevels {
 export interface MetaProfile {
   goldenEggs: number;
   metaUpgrades: MetaUpgradeLevels;
+  unlockedSkinIds: PlayerSkinId[];
+  selectedSkinId: PlayerSkinId;
 }
 
 export interface GameEvent {
@@ -328,6 +331,7 @@ export interface RunSetup {
   difficultyId: DifficultyId;
   enabledUpgrades: UpgradeId[];
   metaUpgrades: MetaUpgradeLevels;
+  selectedSkinId: PlayerSkinId;
 }
 
 export interface EnemyTypeDefinition {

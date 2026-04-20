@@ -417,7 +417,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
           <g>{visibleEnemies.map((enemy) => <EnemySprite key={enemy.id} enemy={enemy} />)}</g>
           <g>{visibleProjectiles.map((projectile) => <ProjectileSprite key={projectile.id} projectile={projectile} />)}</g>
           <g>{visibleOrbitals.map((orbital) => <OrbitalSprite key={orbital.id} orbital={orbital} />)}</g>
-          <g><PlayerSprite player={state.player} /></g>
+          <g><PlayerSprite player={state.player} skinId={setup.selectedSkinId} /></g>
           <g><AimReticle state={state} input={input} /></g>
           <g>{overlayEffects.map((effect) => <EffectSprite key={effect.id} effect={effect} />)}</g>
         </g>

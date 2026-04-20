@@ -1,13 +1,18 @@
-import type { PlayerEntity } from "../../../game/types";
+import type { PlayerEntity, PlayerSkinId } from "../../../game/types";
 import { RoachMascot } from "./RoachMascot";
 
 function toFixed(value: number): number {
   return Number(value.toFixed(1));
 }
 
-export default function PlayerSprite({ player }: { player: PlayerEntity }) {
+function getWorldSkinScale(skinId: PlayerSkinId): number {
+  return skinId === "pickleReporter" ? 0.41 : 0.5;
+}
+
+export default function PlayerSprite({ player, skinId = "labStandard" }: { player: PlayerEntity; skinId?: PlayerSkinId }) {
   const aimAngle = (player.aimAngle * 180) / Math.PI;
   const isBlinking = player.contactTimer > 0 && Math.floor(player.contactTimer * 18) % 2 === 0;
+  const spriteScale = getWorldSkinScale(skinId);
 
   return (
     <g transform={`translate(${toFixed(player.x)} ${toFixed(player.y)})`}>
@@ -19,7 +24,7 @@ export default function PlayerSprite({ player }: { player: PlayerEntity }) {
         <ellipse cx="62" cy="0" rx="8" ry="5" fill="#dccda4" />
       </g>
       <g opacity={isBlinking ? 0.55 : 1}>
-        <RoachMascot scale={0.5} blink={isBlinking} />
+        <RoachMascot scale={spriteScale} blink={isBlinking} variant={skinId} />
       </g>
     </g>
   );

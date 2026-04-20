@@ -1,17 +1,22 @@
 import { DIFFICULTY_ORDER, getDifficultyConfig } from "../game/run/config";
 import { CURRENT_VERSION } from "../content/version";
-import type { DifficultyId } from "../game/types";
+import { getPlayerSkinDefinition } from "../game/meta";
+import type { DifficultyId, PlayerSkinId } from "../game/types";
 import { RoachLogo } from "./sprites/player/RoachMascot";
 
 interface StartScreenProps {
   difficultyId: DifficultyId;
   enabledBuffCount: number;
   goldenEggs: number;
+  selectedSkinId: PlayerSkinId;
   totalBuffCount: number;
+  totalSkinCount: number;
+  unlockedSkinCount: number;
   onOpenBuffSetup: () => void;
   onOpenChangelog: () => void;
   onOpenCompendium: () => void;
   onOpenMetaUpgrade: () => void;
+  onOpenSkinLab: () => void;
   onOpenTutorial: () => void;
   onOpenVolumeSettings: () => void;
   onCheatGoldenEggs: () => void;
@@ -23,11 +28,15 @@ export default function StartScreen({
   difficultyId,
   enabledBuffCount,
   goldenEggs,
+  selectedSkinId,
   totalBuffCount,
+  totalSkinCount,
+  unlockedSkinCount,
   onOpenBuffSetup,
   onOpenChangelog,
   onOpenCompendium,
   onOpenMetaUpgrade,
+  onOpenSkinLab,
   onOpenTutorial,
   onOpenVolumeSettings,
   onCheatGoldenEggs,
@@ -35,6 +44,7 @@ export default function StartScreen({
   onStart,
 }: StartScreenProps) {
   const difficulty = getDifficultyConfig(difficultyId);
+  const selectedSkin = getPlayerSkinDefinition(selectedSkinId);
 
   return (
     <main className="menu-screen">
@@ -106,11 +116,25 @@ export default function StartScreen({
                   外部升级
                 </button>
               </section>
+
+              <section className="config-card config-card-skin">
+                <span>广东人的神必实验室</span>
+                <strong>{selectedSkin.name}</strong>
+                <p>已收藏 {unlockedSkinCount} / {totalSkinCount} 套外观，切换后右侧展示柜会同步换成当前皮肤。</p>
+                <button className="button-secondary" type="button" onClick={onOpenSkinLab}>
+                  切换皮肤
+                </button>
+              </section>
             </div>
           </div>
 
-          <aside className="hero-logo-stage" aria-label="主角蟑螂标志">
-            <RoachLogo className="hero-logo-art" />
+          <aside className="hero-logo-stage" aria-label={`${selectedSkin.name} 预览`}>
+            <div className="hero-logo-copy">
+              <span>当前展示</span>
+              <strong>{selectedSkin.name}</strong>
+              <p>{selectedSkin.flavor}</p>
+            </div>
+            <RoachLogo className="hero-logo-art" skinId={selectedSkinId} />
           </aside>
         </div>
 

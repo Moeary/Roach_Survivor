@@ -1,9 +1,11 @@
 export {
   AUTO_REGEN_INTERVAL_SECONDS,
   BASE_LEVEL_UP_HEAL,
+  DEFAULT_PLAYER_SKIN_ID,
   addGoldenEggs,
   DEFAULT_META_PROFILE,
   EMPTY_META_UPGRADES,
+  getPlayerSkinDefinition,
   getMetaUpgradeBaseLabel,
   getMetaUpgradeBonus,
   getMetaUpgradeBonusLabel,
@@ -11,10 +13,14 @@ export {
   getMetaUpgradeMaxLevel,
   getMetaResetRefund,
   getMetaUpgradeSpentCost,
+  isPlayerSkinOwned,
   META_UPGRADE_DEFS,
   normalizeMetaProfile,
   normalizeMetaUpgrades,
+  PLAYER_SKIN_DEFS,
+  purchasePlayerSkin,
   purchaseMetaUpgrade,
   resetMetaUpgrades,
+  selectPlayerSkin,
 } from "./definitions";
 export { loadMetaProfile, saveMetaProfile } from "./storage";
