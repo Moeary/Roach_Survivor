@@ -306,6 +306,28 @@ function renderBoss(enemy: EnemyEntity, hpRatio: number, transform: string) {
   );
 }
 
+function StatusOverlay({ enemy }: { enemy: EnemyEntity }) {
+  const hasSlow = enemy.statusEffects.some((fx) => fx.type === "slow");
+  const hasPoison = enemy.statusEffects.some((fx) => fx.type === "poison");
+
+  if (!hasSlow && !hasPoison) {
+    return null;
+  }
+
+  const r = enemy.radius;
+
+  return (
+    <g>
+      {hasSlow ? (
+        <ellipse cx="0" cy="0" rx={toFixed(r * 1.1)} ry={toFixed(r * 0.85)} fill="none" stroke="rgba(120, 200, 255, 0.6)" strokeWidth="3" strokeDasharray="6 4" />
+      ) : null}
+      {hasPoison ? (
+        <ellipse cx="0" cy="0" rx={toFixed(r * 0.9)} ry={toFixed(r * 0.68)} fill="rgba(80, 220, 60, 0.12)" stroke="rgba(80, 220, 60, 0.5)" strokeWidth="2" />
+      ) : null}
+    </g>
+  );
+}
+
 export default function EnemySprite({ enemy }: { enemy: EnemyEntity }) {
   const angle = (Math.atan2(enemy.vy, enemy.vx) * 180) / Math.PI;
   const pulseScale = 1 + Math.sin(enemy.pulse || 0) * 0.04;
@@ -336,6 +358,7 @@ export default function EnemySprite({ enemy }: { enemy: EnemyEntity }) {
       <ellipse cx={-toFixed(enemy.radius * 0.7)} cy={-toFixed(enemy.radius * 0.16)} rx={toFixed(enemy.radius * 0.38)} ry={toFixed(enemy.radius * 0.3)} fill={style.headFill} />
       <circle cx={-toFixed(enemy.radius * 0.74)} cy={-toFixed(enemy.radius * 0.24)} r={toFixed(Math.max(3, enemy.radius * 0.14))} fill={style.eyeFill} />
       <circle cx={-toFixed(enemy.radius * 0.74)} cy={-toFixed(enemy.radius * 0.24)} r={toFixed(Math.max(1.8, enemy.radius * 0.06))} fill="#23140f" />
+      <StatusOverlay enemy={enemy} />
     </g>
   );
 }

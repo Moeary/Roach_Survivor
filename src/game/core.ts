@@ -2,10 +2,10 @@
 import { ENEMY_TYPES, pickEnemyTypeForTime } from "./entities/enemies";
 import { AUTO_REGEN_INTERVAL_SECONDS } from "./meta";
 import { createPlayer } from "./entities/player";
+import { getRelicDef, pickRelicChoices, RELIC_MILESTONE_INTERVAL } from "./relics";
 import { getDifficultyConfig, normalizeRunSetup } from "./run/config";
 import { getBossWaveTime, STAGE_THREE_START_TIME, STAGE_TWO_START_TIME } from "./stages";
 import type {
-  Decoration,
   DecorationType,
   DifficultyId,
   EffectEntity,
@@ -16,12 +16,13 @@ import type {
   ObstacleEntity,
   ObstacleType,
   OrbitalEntity,
-  PickupEntity,
   PickupType,
   PlayerEntity,
   ProjectileEntity,
   ProjectileVariant,
+  RelicId,
   RunSetup,
+  StatusEffectType,
   UpgradeId,
 } from "./types";
 
@@ -411,6 +412,16 @@ export function createGameState(setup?: RunSetup): GameState {
     nextOrbitalId: 0,
     nextPickupId: 0,
     nextEffectId: 0,
+    relics: [],
+    relicChoices: [],
+    sessionStats: {
+      kills: 0,
+      damageDealt: 0,
+      damageTaken: 0,
+      projectilesFired: 0,
+      bossesDefeated: 0,
+      peakLevel: 1,
+    },
   };
 
   ensureWorldAroundPlayer(state);
@@ -446,6 +457,10 @@ export function getStatusLabel(state: GameState): string {
 
   if (state.runState === "levelup") {
     return "变异选择";
+  }
+
+  if (state.runState === "relicChoice") {
+    return "遗物拾取";
   }
 
   if (state.runState === "won") {
@@ -539,8 +554,9 @@ function spawnHitSplatter(state: GameState, enemy: EnemyEntity, x: number, y: nu
 }
 
 function gainXp(state: GameState, amount: number): void {
-  state.xp += amount;
-  queueGameEvent(state, "xpGain", amount);
+  const final = state.relics.includes("doubleHatch") ? Math.round(amount * 1.5) : amount;
+  state.xp += final;
+  queueGameEvent(state, "xpGain", final);
 }
 
 function collectGoldenEggs(state: GameState, amount: number, x: number, y: number): void {
@@ -608,6 +624,70 @@ function maybeDropGoldenEgg(state: GameState, enemy: EnemyEntity): void {
   spawnPickup(state, enemy.x, enemy.y, 1, "goldEgg");
 }
 
+const POISON_TICK_INTERVAL = 0.5;
+
+function applyStatusEffect(enemy: EnemyEntity, type: StatusEffectType, duration: number, magnitude: number): void {
+  const existing = enemy.statusEffects.find((fx) => fx.type === type);
+
+  if (existing) {
+    existing.remaining = Math.max(existing.remaining, duration);
+    existing.magnitude = Math.max(existing.magnitude, magnitude);
+    return;
+  }
+
+  enemy.statusEffects.push({
+    type,
+    remaining: duration,
+    magnitude,
+    tickTimer: type === "poison" ? POISON_TICK_INTERVAL : undefined,
+  });
+}
+
+function applyProjectileStatusEffects(state: GameState, enemy: EnemyEntity): void {
+  const { stats } = state.player;
+
+  if (stats.slowAmount > 0 && stats.slowDuration > 0) {
+    applyStatusEffect(enemy, "slow", stats.slowDuration, stats.slowAmount);
+  }
+
+  if (stats.poisonDps > 0 && stats.poisonDuration > 0) {
+    applyStatusEffect(enemy, "poison", stats.poisonDuration, stats.poisonDps);
+  }
+}
+
+function getEnemySpeedMultiplier(enemy: EnemyEntity): number {
+  const slow = enemy.statusEffects.find((fx) => fx.type === "slow");
+  return slow ? Math.max(0.15, 1 - slow.magnitude) : 1;
+}
+
+function updateStatusEffects(state: GameState, enemy: EnemyEntity, dt: number): void {
+  for (let i = enemy.statusEffects.length - 1; i >= 0; i -= 1) {
+    const fx = enemy.statusEffects[i]!;
+    fx.remaining -= dt;
+
+    if (fx.type === "poison" && fx.tickTimer !== undefined) {
+      fx.tickTimer -= dt;
+
+      while (fx.tickTimer <= 0 && enemy.alive) {
+        const tickDamage = fx.magnitude * POISON_TICK_INTERVAL;
+        enemy.hp -= tickDamage;
+        state.sessionStats.damageDealt += tickDamage;
+
+        if (enemy.hp <= 0) {
+          defeatEnemy(state, enemy);
+          return;
+        }
+
+        fx.tickTimer += POISON_TICK_INTERVAL;
+      }
+    }
+
+    if (fx.remaining <= 0) {
+      enemy.statusEffects.splice(i, 1);
+    }
+  }
+}
+
 function autoCollectGoldenEggs(state: GameState): void {
   state.pickups.forEach((pickup) => {
     if (!pickup.alive || pickup.type !== "goldEgg") {
@@ -621,7 +701,12 @@ function autoCollectGoldenEggs(state: GameState): void {
 
 function defeatEnemy(state: GameState, enemy: EnemyEntity, cause: EnemyDefeatCause = "hit"): void {
   enemy.alive = false;
+  state.sessionStats.kills += 1;
   const isMajorBoss = enemy.type === "boss" && enemy.bossRole !== "summon";
+
+  if (isMajorBoss) {
+    state.sessionStats.bossesDefeated += 1;
+  }
 
   if (isMajorBoss) {
     queueGameEvent(state, "bossDie");
@@ -632,7 +717,6 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity, cause: EnemyDefeatCau
   } else {
     queueGameEvent(state, "enemyDieHit");
   }
-
   createEffect(state, {
     x: enemy.x,
     y: enemy.y,
@@ -659,14 +743,58 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity, cause: EnemyDefeatCau
       autoCollectGoldenEggs(state);
     } else {
       spawnPickup(state, enemy.x, enemy.y, reward, "goldEgg");
+      const relicOptions = pickRelicChoices(state, 3);
+
+      if (relicOptions.length > 0) {
+        state.relicChoices = relicOptions;
+        state.runState = "relicChoice";
+      }
     }
 
     return;
   }
 
   dropXpOrbs(state, enemy.x, enemy.y, enemy.xp);
-
   maybeDropGoldenEgg(state, enemy);
+
+  if (state.relics.includes("bloodthirst")) {
+    state.player.hp = Math.min(state.player.maxHp, state.player.hp + 3);
+  }
+
+  if (state.relics.includes("speedPheromone")) {
+    state.player.speedBuffTimer = 3;
+  }
+
+  if (state.relics.includes("chainSpore")) {
+    const sporeDamage = Math.round(state.player.stats.projectileDamage * 0.4);
+    let sporeCount = 0;
+
+    for (const target of state.enemies) {
+      if (!target.alive || target.id === enemy.id || sporeCount >= 3) {
+        continue;
+      }
+
+      if (distance(enemy.x, enemy.y, target.x, target.y) > 120 + target.radius) {
+        continue;
+      }
+
+      target.hp -= sporeDamage;
+      state.sessionStats.damageDealt += sporeDamage;
+      sporeCount += 1;
+
+      createEffect(state, {
+        x: target.x,
+        y: target.y,
+        radius: 20,
+        tint: "#88cc44",
+        duration: 0.28,
+      });
+
+      if (target.hp <= 0) {
+        defeatEnemy(state, target);
+      }
+    }
+  }
 }
 
 function findSpawnPositionAroundPoint(
@@ -757,6 +885,7 @@ function spawnEnemy(state: GameState, enemyTypeId: EnemyTypeId, position?: { x: 
     summonBurst: undefined,
     summonPool: undefined,
     rangedTimer: template.ranged ? template.ranged.cooldown * (0.3 + Math.random() * 0.5) : undefined,
+    statusEffects: [],
   };
 
   resolveAgainstObstacles(state, enemy, 10);
@@ -1152,8 +1281,14 @@ function updatePlayerMovement(state: GameState, input: InputState, dt: number): 
     direction = normalize(axisX, axisY);
   }
 
-  player.vx = direction.x * player.stats.moveSpeed;
-  player.vy = direction.y * player.stats.moveSpeed;
+  const speedMul = player.speedBuffTimer > 0 ? 1.25 : 1;
+
+  if (player.speedBuffTimer > 0) {
+    player.speedBuffTimer = Math.max(0, player.speedBuffTimer - dt);
+  }
+
+  player.vx = direction.x * player.stats.moveSpeed * speedMul;
+  player.vy = direction.y * player.stats.moveSpeed * speedMul;
   player.x += player.vx * dt;
   player.y += player.vy * dt;
   resolveAgainstObstacles(state, player);
@@ -1236,6 +1371,7 @@ function updateEnemies(state: GameState, dt: number): void {
     if (!handledBossAction) {
       const direction = normalize(player.x - enemy.x, player.y - enemy.y);
       const ranged = ENEMY_TYPES[enemy.type].ranged;
+      const statusSpeedMul = getEnemySpeedMultiplier(enemy);
 
       if (ranged) {
         const distToPlayer = distance(enemy.x, enemy.y, player.x, player.y);
@@ -1243,8 +1379,8 @@ function updateEnemies(state: GameState, dt: number): void {
         const shouldHalt = !ranged.moveWhileFiring && distToPlayer <= ranged.stopDistance;
         const speedScale = shouldHalt ? 0 : ranged.moveWhileFiring && inRange ? 0.5 : 1;
 
-        enemy.vx = direction.x * enemy.speed * speedScale;
-        enemy.vy = direction.y * enemy.speed * speedScale;
+        enemy.vx = direction.x * enemy.speed * speedScale * statusSpeedMul;
+        enemy.vy = direction.y * enemy.speed * speedScale * statusSpeedMul;
         enemy.x += enemy.vx * dt;
         enemy.y += enemy.vy * dt;
 
@@ -1266,8 +1402,8 @@ function updateEnemies(state: GameState, dt: number): void {
       } else {
         const aggression = enemy.type === "boss" ? 1 : 1 + Math.min(0.35, state.timer * 0.0011);
 
-        enemy.vx = direction.x * enemy.speed * aggression;
-        enemy.vy = direction.y * enemy.speed * aggression;
+        enemy.vx = direction.x * enemy.speed * aggression * statusSpeedMul;
+        enemy.vy = direction.y * enemy.speed * aggression * statusSpeedMul;
         enemy.x += enemy.vx * dt;
         enemy.y += enemy.vy * dt;
 
@@ -1277,36 +1413,52 @@ function updateEnemies(state: GameState, dt: number): void {
       }
     }
 
+    updateStatusEffects(state, enemy, dt);
+
+    if (!enemy.alive) {
+      return;
+    }
+
     enemy.pulse += dt * (enemy.type === "boss" && enemy.bossAction !== "chase" ? 8 : 5);
     livingEnemies.push(enemy);
 
     const contactDirection = normalize(player.x - enemy.x, player.y - enemy.y);
 
     if (distance(enemy.x, enemy.y, player.x, player.y) <= enemy.radius + player.radius - 3 && player.contactTimer <= 0) {
-      const knockbackX = contactDirection.x * 28;
-      const knockbackY = contactDirection.y * 28;
-      const damage = enemy.damage * player.stats.contactDamageMultiplier;
+      if (state.relics.includes("stressDodge") && Math.random() < 0.12) {
+        player.contactTimer = CONTACT_COOLDOWN * 0.5;
+        createEffect(state, { x: player.x, y: player.y, radius: player.radius * 1.4, tint: "#ffffff", duration: 0.18 });
+      } else {
+        const knockbackX = contactDirection.x * 28;
+        const knockbackY = contactDirection.y * 28;
+        let damage = enemy.damage * player.stats.contactDamageMultiplier;
 
-      player.hp = Math.max(0, player.hp - damage);
-      player.contactTimer = CONTACT_COOLDOWN;
-      queueGameEvent(state, "playerHurt", Number(damage.toFixed(1)));
-      player.x += knockbackX;
-      player.y += knockbackY;
-      enemy.x -= knockbackX * 0.7;
-      enemy.y -= knockbackY * 0.7;
-      resolveAgainstObstacles(state, player);
+        if (state.relics.includes("thickSkin")) {
+          damage = Math.max(1, damage - 4);
+        }
 
-      if (!enemy.ignoresObstacles) {
-        resolveAgainstObstacles(state, enemy, 12);
+        player.hp = Math.max(0, player.hp - damage);
+        player.contactTimer = CONTACT_COOLDOWN;
+        state.sessionStats.damageTaken += damage;
+        queueGameEvent(state, "playerHurt", Number(damage.toFixed(1)));
+        player.x += knockbackX;
+        player.y += knockbackY;
+        enemy.x -= knockbackX * 0.7;
+        enemy.y -= knockbackY * 0.7;
+        resolveAgainstObstacles(state, player);
+
+        if (!enemy.ignoresObstacles) {
+          resolveAgainstObstacles(state, enemy, 12);
+        }
+
+        createEffect(state, {
+          x: player.x,
+          y: player.y,
+          radius: player.radius * 1.2,
+          tint: "#ff9c47",
+          duration: 0.25,
+        });
       }
-
-      createEffect(state, {
-        x: player.x,
-        y: player.y,
-        radius: player.radius * 1.2,
-        tint: "#ff9c47",
-        duration: 0.25,
-      });
     }
   });
 
@@ -1446,6 +1598,10 @@ function updateManualFire(state: GameState, input: InputState, dt: number): void
     return;
   }
 
+  const frenzyMul = state.relics.includes("frenzyGland")
+    ? 1 - Math.min(0.3, state.enemies.filter((e) => e.alive && distance(e.x, e.y, player.x, player.y) < 300).length * 0.03)
+    : 1;
+
   while (player.attackTimer <= 0) {
     fireSpread(state, player.aimAngle, player.stats.projectileCount, {
       variant: "manual",
@@ -1465,8 +1621,9 @@ function updateManualFire(state: GameState, input: InputState, dt: number): void
       duration: 0.18,
     });
     queueGameEvent(state, "playerShot");
+    state.sessionStats.projectilesFired += 1;
 
-    player.attackTimer += player.stats.attackCooldown;
+    player.attackTimer += player.stats.attackCooldown * frenzyMul;
   }
 }
 
@@ -1508,8 +1665,12 @@ function updateAutoTurrets(state: GameState, dt: number): void {
       duration: 0.16,
     });
     queueGameEvent(state, "playerShot");
+    state.sessionStats.projectilesFired += 1;
 
-    player.autoAttackTimer += player.stats.autoTurretCooldown;
+    const autoFrenzyMul = state.relics.includes("frenzyGland")
+      ? 1 - Math.min(0.3, state.enemies.filter((e) => e.alive && distance(e.x, e.y, player.x, player.y) < 300).length * 0.03)
+      : 1;
+    player.autoAttackTimer += player.stats.autoTurretCooldown * autoFrenzyMul;
   }
 }
 
@@ -1595,6 +1756,7 @@ function updateOrbitals(state: GameState, dt: number): void {
       }
 
       enemy.hp -= state.player.stats.orbitalDamage;
+      state.sessionStats.damageDealt += state.player.stats.orbitalDamage;
       orbital.active = false;
       orbital.respawnTimer = state.player.stats.orbitalRespawn;
 
@@ -1681,6 +1843,7 @@ function updateLightningStorm(state: GameState, dt: number): void {
       }
 
       enemy.hp -= strikeDamage;
+      state.sessionStats.damageDealt += strikeDamage;
 
       spawnHitSplatter(state, enemy, enemy.x, enemy.y, Math.atan2(enemy.y - strikeY, enemy.x - strikeX));
 
@@ -1727,6 +1890,7 @@ function explodeProjectile(state: GameState, projectile: ProjectileEntity, x: nu
     }
 
     enemy.hp -= damage;
+    state.sessionStats.damageDealt += damage;
 
     spawnHitSplatter(state, enemy, enemy.x, enemy.y, Math.atan2(enemy.y - y, enemy.x - x));
 
@@ -1789,10 +1953,21 @@ function updateProjectiles(state: GameState, dt: number): void {
       }
 
       if (player.contactTimer <= 0 && player.hp > 0) {
-        const damage = projectile.damage;
-        player.hp = Math.max(0, player.hp - damage);
-        player.contactTimer = CONTACT_COOLDOWN;
-        queueGameEvent(state, "playerHurt", Number(damage.toFixed(1)));
+        if (state.relics.includes("stressDodge") && Math.random() < 0.12) {
+          player.contactTimer = CONTACT_COOLDOWN * 0.5;
+          createEffect(state, { x: player.x, y: player.y, radius: player.radius * 1.4, tint: "#ffffff", duration: 0.18 });
+        } else {
+          let damage = projectile.damage;
+
+          if (state.relics.includes("thickSkin")) {
+            damage = Math.max(1, damage - 4);
+          }
+
+          player.hp = Math.max(0, player.hp - damage);
+          player.contactTimer = CONTACT_COOLDOWN;
+          state.sessionStats.damageTaken += damage;
+          queueGameEvent(state, "playerHurt", Number(damage.toFixed(1)));
+        }
       }
 
       projectile.alive = false;
@@ -1816,13 +1991,47 @@ function updateProjectiles(state: GameState, dt: number): void {
       }
 
       projectile.hitIds.add(enemy.id);
-      enemy.hp -= projectile.damage;
+      let hitDamage = projectile.damage;
+
+      if (state.relics.includes("critGland") && Math.random() < 0.15) {
+        hitDamage *= 3;
+        createEffect(state, { x: projectile.x, y: projectile.y, radius: 22, tint: "#ffee44", duration: 0.24 });
+      }
+
+      if (state.relics.includes("deathRage")) {
+        hitDamage *= 1 + (1 - state.player.hp / state.player.maxHp);
+      }
+
+      enemy.hp -= hitDamage;
+      state.sessionStats.damageDealt += hitDamage;
       projectile.hitsRemaining -= 1;
 
+      applyProjectileStatusEffects(state, enemy);
       spawnHitSplatter(state, enemy, projectile.x, projectile.y, projectile.angle);
 
-      if (enemy.hp <= 0) {
+      const killed = enemy.hp <= 0;
+
+      if (killed) {
         defeatEnemy(state, enemy, "hit");
+      }
+
+      if (killed && state.relics.includes("ricochet")) {
+        const nearest = getNearestEnemy(state, projectile.x, projectile.y, 300);
+
+        if (nearest && !projectile.hitIds.has(nearest.id)) {
+          const redirectAngle = Math.atan2(nearest.y - projectile.y, nearest.x - projectile.x);
+          const speed = Math.hypot(projectile.vx, projectile.vy);
+          projectile.vx = Math.cos(redirectAngle) * speed;
+          projectile.vy = Math.sin(redirectAngle) * speed;
+          projectile.angle = redirectAngle;
+
+          if (projectile.hitsRemaining <= 0) {
+            projectile.hitsRemaining = 1;
+          }
+
+          projectile.alive = true;
+          continue;
+        }
       }
 
       if (projectile.hitsRemaining <= 0) {
@@ -1845,7 +2054,9 @@ function updatePickups(state: GameState, dt: number): void {
     const deltaX = player.x - pickup.x;
     const deltaY = player.y - pickup.y;
     const orbDistance = Math.hypot(deltaX, deltaY) || 1;
-    const attractDistance = player.stats.pickupRadius + 86;
+    const attractDistance = state.relics.includes("magnetTendril") && pickup.type === "xp"
+      ? 99999
+      : player.stats.pickupRadius + 86;
 
     if (orbDistance <= attractDistance) {
       const direction = normalize(deltaX, deltaY);
@@ -1893,9 +2104,21 @@ function checkLevelUp(state: GameState): void {
 
   state.xp -= state.xpToNext;
   state.level += 1;
+  state.sessionStats.peakLevel = state.level;
   state.xpToNext = Math.floor(state.xpToNext * 1.24 + 4);
-  state.upgradeChoices = pickUpgradeChoices(state, 3);
   queueGameEvent(state, "levelUp");
+
+  if (state.level % RELIC_MILESTONE_INTERVAL === 0) {
+    const relicOptions = pickRelicChoices(state, 3);
+
+    if (relicOptions.length > 0) {
+      state.relicChoices = relicOptions;
+      state.runState = "relicChoice";
+      return;
+    }
+  }
+
+  state.upgradeChoices = pickUpgradeChoices(state, 3);
   state.runState = "levelup";
 }
 
@@ -1992,6 +2215,30 @@ export function chooseUpgrade(state: GameState, upgradeId: UpgradeId): boolean {
 
   state.upgradeChoices = [];
   state.player.hp = Math.min(state.player.maxHp, state.player.hp + state.player.stats.levelUpHeal);
+  state.runState = "running";
+  return true;
+}
+
+export function chooseRelic(state: GameState, relicId: RelicId): boolean {
+  if (state.runState !== "relicChoice") {
+    return false;
+  }
+
+  const def = getRelicDef(relicId);
+
+  if (!def || state.relics.includes(relicId)) {
+    return false;
+  }
+
+  state.relics.push(relicId);
+
+  if (def.onAcquire) {
+    def.onAcquire(state);
+  }
+
+  state.relicChoices = [];
+  state.player.hp = Math.min(state.player.maxHp, state.player.hp + state.player.stats.levelUpHeal);
+  queueGameEvent(state, "relicGained");
   state.runState = "running";
   return true;
 }
