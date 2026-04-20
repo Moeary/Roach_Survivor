@@ -5,6 +5,7 @@ release/
 
 *.tsbuildinfo
 *.log
+*.ps1
 npm-debug.log*
 
 .DS_Store

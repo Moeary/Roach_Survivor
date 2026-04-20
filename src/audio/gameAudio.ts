@@ -10,6 +10,9 @@ export interface AudioSettings {
 export type AudioCueId =
   | "playerShot"
   | "enemyDie"
+  | "enemyDieHit"
+  | "enemyDieExplode"
+  | "enemyDieShock"
   | "goldEggGain"
   | "playerHurt"
   | "xpGain"
@@ -21,11 +24,31 @@ export type AudioCueId =
   | "startGame"
   | "cheat"
   | "uiOpen"
+  | "bossSpawn"
+  | "bossDie"
   | "bossSkillCharge"
   | "bossSkillCast"
   | "bossSummon"
   | "lightningStrike"
   | "playerDefeat";
+
+type SfxTrackDefinition = {
+  variants: string[];
+  fallback?: string;
+};
+
+function buildSfxTrack(baseName: string, variantCount = 0, fallbackBaseName?: string): SfxTrackDefinition {
+  if (variantCount <= 0) {
+    return {
+      variants: [`/audio/sfx/${baseName}.ogg`],
+    };
+  }
+
+  return {
+    variants: Array.from({ length: variantCount }, (_, index) => `/audio/sfx/${baseName}_${index + 1}.ogg`),
+    fallback: `/audio/sfx/${fallbackBaseName ?? baseName}.ogg`,
+  };
+}
 
 const BGM_TRACKS: Record<BgmTrackId, string[]> = {
   menu: ["/audio/bgm/menu.ogg"],
@@ -38,30 +61,38 @@ const BGM_TRACKS: Record<BgmTrackId, string[]> = {
   boss3: ["/audio/bgm/boss-3.ogg", "/audio/bgm/wave-3.ogg"],
 };
 
-const SFX_TRACKS: Record<AudioCueId, string> = {
-  playerShot: "/audio/sfx/player-shot.ogg",
-  enemyDie: "/audio/sfx/enemy-die.ogg",
-  goldEggGain: "/audio/sfx/gold-egg.ogg",
-  playerHurt: "/audio/sfx/player-hurt.ogg",
-  xpGain: "/audio/sfx/xp-gain.ogg",
-  levelUp: "/audio/sfx/level-up.ogg",
-  buffReroll: "/audio/sfx/buff-reroll.ogg",
-  metaUpgrade: "/audio/sfx/meta-upgrade.ogg",
-  metaReset: "/audio/sfx/meta-reset.ogg",
-  difficultySelect: "/audio/sfx/difficulty-select.ogg",
-  startGame: "/audio/sfx/start-game.ogg",
-  cheat: "/audio/sfx/cheat.ogg",
-  uiOpen: "/audio/sfx/ui-open.ogg",
-  bossSkillCharge: "/audio/sfx/boss-skill-charge.ogg",
-  bossSkillCast: "/audio/sfx/boss-skill-cast.ogg",
-  bossSummon: "/audio/sfx/boss-summon.ogg",
-  lightningStrike: "/audio/sfx/lightning-strike.ogg",
-  playerDefeat: "/audio/sfx/player-defeat.ogg",
+const SFX_TRACKS: Record<AudioCueId, SfxTrackDefinition> = {
+  playerShot: buildSfxTrack("player-shot", 4),
+  enemyDie: buildSfxTrack("enemy-die-hit", 4, "enemy-die"),
+  enemyDieHit: buildSfxTrack("enemy-die-hit", 4, "enemy-die"),
+  enemyDieExplode: buildSfxTrack("enemy-die-explode", 4),
+  enemyDieShock: buildSfxTrack("enemy-die-shock", 4),
+  goldEggGain: buildSfxTrack("gold-egg", 4),
+  playerHurt: buildSfxTrack("player-hurt", 4),
+  xpGain: buildSfxTrack("xp-gain", 4),
+  levelUp: buildSfxTrack("level-up", 4),
+  buffReroll: buildSfxTrack("buff-reroll", 4),
+  metaUpgrade: buildSfxTrack("meta-upgrade", 4),
+  metaReset: buildSfxTrack("meta-reset", 4),
+  difficultySelect: buildSfxTrack("difficulty-select", 4),
+  startGame: buildSfxTrack("start-game", 4),
+  cheat: buildSfxTrack("cheat", 4),
+  uiOpen: buildSfxTrack("ui-open", 4),
+  bossSpawn: buildSfxTrack("boss-spawn", 4),
+  bossDie: buildSfxTrack("boss-die", 4),
+  bossSkillCharge: buildSfxTrack("boss-skill-charge", 4),
+  bossSkillCast: buildSfxTrack("boss-skill-cast", 4),
+  bossSummon: buildSfxTrack("boss-summon", 4),
+  lightningStrike: buildSfxTrack("lightning-strike", 4),
+  playerDefeat: buildSfxTrack("player-defeat", 4),
 };
 
 const SFX_VOLUME: Record<AudioCueId, number> = {
   playerShot: 0.26,
   enemyDie: 0.28,
+  enemyDieHit: 0.3,
+  enemyDieExplode: 0.32,
+  enemyDieShock: 0.3,
   goldEggGain: 0.34,
   playerHurt: 0.3,
   xpGain: 0.18,
@@ -73,6 +104,8 @@ const SFX_VOLUME: Record<AudioCueId, number> = {
   startGame: 0.28,
   cheat: 0.3,
   uiOpen: 0.2,
+  bossSpawn: 0.28,
+  bossDie: 0.34,
   bossSkillCharge: 0.24,
   bossSkillCast: 0.28,
   bossSummon: 0.26,
@@ -83,6 +116,9 @@ const SFX_VOLUME: Record<AudioCueId, number> = {
 const SFX_INTERVAL_MS: Record<AudioCueId, number> = {
   playerShot: 90,
   enemyDie: 70,
+  enemyDieHit: 60,
+  enemyDieExplode: 120,
+  enemyDieShock: 100,
   goldEggGain: 120,
   playerHurt: 120,
   xpGain: 50,
@@ -94,6 +130,8 @@ const SFX_INTERVAL_MS: Record<AudioCueId, number> = {
   startGame: 180,
   cheat: 120,
   uiOpen: 100,
+  bossSpawn: 280,
+  bossDie: 800,
   bossSkillCharge: 120,
   bossSkillCast: 120,
   bossSummon: 220,
@@ -182,7 +220,7 @@ function scheduleAudioWarmup(): void {
   const queue = Array.from(
     new Set([
       ...Object.values(BGM_TRACKS).flat(),
-      ...Object.values(SFX_TRACKS),
+      ...Object.values(SFX_TRACKS).flatMap((track) => track.fallback ? [...track.variants, track.fallback] : track.variants),
     ]),
   );
 
@@ -238,14 +276,19 @@ export class GameAudioController {
   private bgmTrack: BgmTrackId | null = null;
   private bgmSourcePath: string | null = null;
   private unavailableBgm = new Set<string>();
-  private unavailableSfx = new Set<AudioCueId>();
+  private unavailableSfxPaths = new Set<string>();
   private unlocked = false;
   private lastSfxAt: Partial<Record<AudioCueId, number>> = {};
+  private lastSfxPath: Partial<Record<AudioCueId, string>> = {};
+  private sfxAvailability = new Map<string, boolean>();
+  private sfxProbePromises = new Map<string, Promise<void>>();
+  private sfxCatalogPrimed = false;
   private settings: AudioSettings;
 
   constructor(initialSettings?: Partial<AudioSettings>) {
     scheduleAudioWarmup();
     this.settings = normalizeAudioSettings(initialSettings);
+    this.primeSfxCatalog();
   }
 
   unlock() {
@@ -373,6 +416,12 @@ export class GameAudioController {
         this.playCue("playerShot");
       } else if (event.type === "enemyDie") {
         this.playCue("enemyDie");
+      } else if (event.type === "enemyDieHit") {
+        this.playCue("enemyDieHit");
+      } else if (event.type === "enemyDieExplode") {
+        this.playCue("enemyDieExplode");
+      } else if (event.type === "enemyDieShock") {
+        this.playCue("enemyDieShock");
       } else if (event.type === "goldEggGain") {
         this.playCue("goldEggGain");
       } else if (event.type === "playerHurt") {
@@ -383,6 +432,10 @@ export class GameAudioController {
         this.playCue("levelUp");
       } else if (event.type === "buffReroll") {
         this.playCue("buffReroll");
+      } else if (event.type === "bossSpawn") {
+        this.playCue("bossSpawn");
+      } else if (event.type === "bossDie") {
+        this.playCue("bossDie");
       } else if (event.type === "bossSkillCharge") {
         this.playCue("bossSkillCharge");
       } else if (event.type === "bossSkillCast") {
@@ -413,11 +466,83 @@ export class GameAudioController {
     this.bgmSourcePath = null;
   }
 
-  private playSfx(trackId: AudioCueId, force = false) {
-    if (!this.unlocked || this.unavailableSfx.has(trackId)) {
+  private primeSfxCatalog() {
+    if (this.sfxCatalogPrimed || typeof window === "undefined") {
       return;
     }
 
+    this.sfxCatalogPrimed = true;
+    const paths = Array.from(
+      new Set(
+        Object.values(SFX_TRACKS).flatMap((track) => track.fallback ? [...track.variants, track.fallback] : track.variants),
+      ),
+    );
+
+    paths.forEach((path) => {
+      void this.probeSfxPath(path);
+    });
+  }
+
+  private async probeSfxPath(path: string) {
+    if (typeof window === "undefined" || this.sfxAvailability.has(path) || this.sfxProbePromises.has(path)) {
+      return;
+    }
+
+    const probe = fetch(path, { method: "HEAD", cache: "no-store" })
+      .then((response) => {
+        this.sfxAvailability.set(path, response.ok);
+
+        if (!response.ok) {
+          this.unavailableSfxPaths.add(path);
+        }
+      })
+      .catch(() => {
+        this.sfxAvailability.set(path, false);
+        this.unavailableSfxPaths.add(path);
+      })
+      .finally(() => {
+        this.sfxProbePromises.delete(path);
+      });
+
+    this.sfxProbePromises.set(path, probe);
+    await probe;
+  }
+
+  private resolveSfxSource(trackId: AudioCueId): string | null {
+    const track = SFX_TRACKS[trackId];
+    const confirmedVariants = track.variants.filter((path) => this.sfxAvailability.get(path) === true && !this.unavailableSfxPaths.has(path));
+
+    if (confirmedVariants.length > 0) {
+      return this.pickSfxVariant(trackId, confirmedVariants);
+    }
+
+    const fallbackCandidates = track.variants.filter((path) => this.sfxAvailability.get(path) !== false && !this.unavailableSfxPaths.has(path));
+
+    if (fallbackCandidates.length > 0) {
+      return this.pickSfxVariant(trackId, fallbackCandidates);
+    }
+
+    if (track.fallback && this.sfxAvailability.get(track.fallback) !== false && !this.unavailableSfxPaths.has(track.fallback)) {
+      return track.fallback;
+    }
+
+    return null;
+  }
+
+  private pickSfxVariant(trackId: AudioCueId, paths: string[]): string {
+    const previous = this.lastSfxPath[trackId];
+    const pool = paths.length > 1 ? paths.filter((path) => path !== previous) : paths;
+    const nextPath = pool[Math.floor(Math.random() * pool.length)] ?? paths[0]!;
+    this.lastSfxPath[trackId] = nextPath;
+    return nextPath;
+  }
+
+  private playSfx(trackId: AudioCueId, force = false) {
+    if (!this.unlocked) {
+      return;
+    }
+
+    this.primeSfxCatalog();
     const now = performance.now();
     const minInterval = SFX_INTERVAL_MS[trackId];
 
@@ -426,11 +551,21 @@ export class GameAudioController {
     }
 
     this.lastSfxAt[trackId] = now;
+    const source = this.resolveSfxSource(trackId);
 
-    const audio = createPlayableAudio(SFX_TRACKS[trackId]);
+    if (!source) {
+      return;
+    }
+
+    void this.probeSfxPath(source);
+    const audio = createPlayableAudio(source);
     audio.volume = this.getSfxVolume(trackId);
     audio.addEventListener("error", () => {
-      this.unavailableSfx.add(trackId);
+      this.unavailableSfxPaths.add(source);
+      this.sfxAvailability.set(source, false);
+    });
+    audio.addEventListener("canplaythrough", () => {
+      this.sfxAvailability.set(source, true);
     });
     void audio.play().catch(() => undefined);
   }

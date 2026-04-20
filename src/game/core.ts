@@ -146,6 +146,8 @@ export const BOSS_WAVE_CONFIGS: Record<number, BossWaveConfig> = {
   },
 };
 
+type EnemyDefeatCause = "hit" | "explode" | "shock";
+
 
 function distance(aX: number, aY: number, bX: number, bY: number): number {
   return Math.hypot(bX - aX, bY - aY);
@@ -617,9 +619,20 @@ function autoCollectGoldenEggs(state: GameState): void {
   });
 }
 
-function defeatEnemy(state: GameState, enemy: EnemyEntity): void {
+function defeatEnemy(state: GameState, enemy: EnemyEntity, cause: EnemyDefeatCause = "hit"): void {
   enemy.alive = false;
-  queueGameEvent(state, "enemyDie");
+  const isMajorBoss = enemy.type === "boss" && enemy.bossRole !== "summon";
+
+  if (isMajorBoss) {
+    queueGameEvent(state, "bossDie");
+  } else if (cause === "explode") {
+    queueGameEvent(state, "enemyDieExplode");
+  } else if (cause === "shock") {
+    queueGameEvent(state, "enemyDieShock");
+  } else {
+    queueGameEvent(state, "enemyDieHit");
+  }
+
   createEffect(state, {
     x: enemy.x,
     y: enemy.y,
@@ -1104,6 +1117,7 @@ function spawnBoss(state: GameState): void {
     tint: bossWave === 3 ? "#c93655" : bossWave === 2 ? "#ff7a4d" : "#f04d5d",
     duration: 0.82,
   });
+  queueGameEvent(state, "bossSpawn");
 }
 
 function updateSpawning(state: GameState, dt: number): void {
@@ -1587,7 +1601,7 @@ function updateOrbitals(state: GameState, dt: number): void {
       spawnHitSplatter(state, enemy, orbital.x, orbital.y, Math.atan2(enemy.y - orbital.y, enemy.x - orbital.x));
 
       if (enemy.hp <= 0) {
-        defeatEnemy(state, enemy);
+        defeatEnemy(state, enemy, "hit");
       }
 
       break;
@@ -1671,7 +1685,7 @@ function updateLightningStorm(state: GameState, dt: number): void {
       spawnHitSplatter(state, enemy, enemy.x, enemy.y, Math.atan2(enemy.y - strikeY, enemy.x - strikeX));
 
       if (enemy.hp <= 0) {
-        defeatEnemy(state, enemy);
+        defeatEnemy(state, enemy, "shock");
       }
     });
 
@@ -1717,7 +1731,7 @@ function explodeProjectile(state: GameState, projectile: ProjectileEntity, x: nu
     spawnHitSplatter(state, enemy, enemy.x, enemy.y, Math.atan2(enemy.y - y, enemy.x - x));
 
     if (enemy.hp <= 0) {
-      defeatEnemy(state, enemy);
+      defeatEnemy(state, enemy, "explode");
     }
   });
 
@@ -1808,7 +1822,7 @@ function updateProjectiles(state: GameState, dt: number): void {
       spawnHitSplatter(state, enemy, projectile.x, projectile.y, projectile.angle);
 
       if (enemy.hp <= 0) {
-        defeatEnemy(state, enemy);
+        defeatEnemy(state, enemy, "hit");
       }
 
       if (projectile.hitsRemaining <= 0) {

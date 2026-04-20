@@ -21,7 +21,10 @@
 ## SFX 文件
 
 - `sfx/player-shot.ogg`：主武器 / 自动副炮发射
-- `sfx/enemy-die.ogg`：普通敌人或 Boss 死亡
+- `sfx/enemy-die.ogg`：普通敌人死亡的兼容回退文件
+- `sfx/enemy-die-hit.ogg`：普通敌人被子弹 / 近战 / 直接命中击杀
+- `sfx/enemy-die-explode.ogg`：普通敌人被爆炸击杀
+- `sfx/enemy-die-shock.ogg`：普通敌人被雷击 / 电击击杀
 - `sfx/player-hurt.ogg`：主角受击
 - `sfx/xp-gain.ogg`：吸收经验
 - `sfx/gold-egg.ogg`：获得金色卵鞘
@@ -33,11 +36,33 @@
 - `sfx/start-game.ogg`：开始游戏
 - `sfx/ui-open.ogg`：打开任意功能弹窗
 - `sfx/cheat.ogg`：作弊快进或测试入口
+- `sfx/boss-spawn.ogg`：Boss 登场
+- `sfx/boss-die.ogg`：Boss 死亡
 - `sfx/boss-skill-charge.ogg`：Boss 技能前摇 / 蓄力
 - `sfx/boss-skill-cast.ogg`：Boss 技能正式释放
 - `sfx/boss-summon.ogg`：Boss 召唤杂兵或支援 Boss
 - `sfx/lightning-strike.ogg`：静电巢雷触发
 - `sfx/player-defeat.ogg`：主角失败结算
+
+## 变体命名规则
+
+- 运行时支持同一类音效的多候选文件：`name_1.ogg`、`name_2.ogg`、`name_3.ogg`、`name_4.ogg`
+- 如果这些候选文件存在，游戏会在可用文件里随机播放，并尽量避免同一音效连续两次完全相同
+- 如果候选文件不存在，或你试听后只想保留一个版本，直接保留 / 覆盖对应的基础文件 `name.ogg` 即可
+- 推荐工作流：
+  先试听 `*_1` 到 `*_4`
+  然后把最满意的那个改成基础名 `name.ogg`
+  最后删掉其他候选；代码会自动回退到基础文件
+- 当前已经接入随机候选的类别包括：
+  `player-shot`
+  `enemy-die-hit`、`enemy-die-explode`、`enemy-die-shock`
+  `player-hurt`、`player-defeat`
+  `xp-gain`、`gold-egg`、`level-up`
+  `buff-reroll`
+  `meta-upgrade`、`meta-reset`
+  `difficulty-select`、`start-game`、`cheat`、`ui-open`
+  `boss-spawn`、`boss-die`、`boss-skill-charge`、`boss-skill-cast`、`boss-summon`
+  `lightning-strike`
 
 ## 占位文件建议
 
@@ -49,23 +74,30 @@
 
 - 来源站点：Mixkit
 - 许可页：[Mixkit License](https://mixkit.co/license/)
-- 说明：本次替换用于项目内游戏音效，不单独再分发源文件。
-
-- `sfx/ui-open.ogg`
-  来源：`Opening software interface`
-  下载页：`https://mixkit.co/free-sound-effects/download/2578/?context=item+grid`
-- `sfx/boss-skill-charge.ogg`
-  来源：`Monster calm growl`
-  下载页：`https://mixkit.co/free-sound-effects/download/1956/?context=item+grid`
-- `sfx/boss-skill-cast.ogg`
-  来源：`Heavy electric shockwave impact`
-  下载页：`https://mixkit.co/free-sound-effects/download/2599/?context=item+grid`
-- `sfx/boss-summon.ogg`
-  来源：`Giant monster roar`
-  下载页：`https://mixkit.co/free-sound-effects/download/1972/?context=item+grid`
-- `sfx/lightning-strike.ogg`
-  来源：`Electricity lightning blast`
-  下载页：`https://mixkit.co/free-sound-effects/download/2601/?context=item+grid`
-- `sfx/player-defeat.ogg`
-  来源：`Spooky game over`
-  下载页：`https://mixkit.co/free-sound-effects/download/1948/?context=item+grid`
+- 说明：本次已经把项目里当前接线的主要 SFX 全部补成候选池，具体下载 ID 与转换流程记录在 `scripts/import-mixkit-sfx.ps1`
+- 已导入为多候选的类别：
+  `player-shot`
+  `player-hurt`
+  `player-defeat`
+  `enemy-die-hit`
+  `enemy-die-explode`
+  `enemy-die-shock`
+  `xp-gain`
+  `gold-egg`
+  `level-up`
+  `buff-reroll`
+  `meta-upgrade`
+  `meta-reset`
+  `difficulty-select`
+  `start-game`
+  `cheat`
+  `ui-open`
+  `boss-spawn`
+  `boss-die`
+  `boss-skill-charge`
+  `boss-skill-cast`
+  `boss-summon`
+  `lightning-strike`
+- 说明补充：
+  `lightning-strike_3.ogg` 与 `lightning-strike_4.ogg` 在转码时做了倍速处理，让雷击更短、更利落
+  每个类别的 `_1` 文件额外复制成了基础名 `name.ogg`，方便在删掉其余候选后继续正常播放
