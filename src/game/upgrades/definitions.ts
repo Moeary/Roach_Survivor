@@ -49,9 +49,9 @@ export const UPGRADE_DEFS: UpgradeDefinition[] = [
     id: "moveSpeed",
     name: "惊吓疾跑",
     shortName: "移速",
-    description: "移动速度提升 25%，走位和转场都会更轻松。",
+    description: "每级移动速度提升 10%，走位和转场都会更轻松。",
     apply(state) {
-      state.player.stats.moveSpeed *= 1.25;
+      state.player.stats.moveSpeed *= 1.1;
     },
   },
   {

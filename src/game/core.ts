@@ -35,6 +35,8 @@ const WORLD_GENERATION_RADIUS = 2;
 const CONTACT_COOLDOWN = 0.62;
 const PLAYER_SAFE_RADIUS = 210;
 const OBSTACLE_PADDING = 8;
+const BOSS_DASH_MIN_DISTANCE = 640;
+const BOSS_DASH_MAX_DISTANCE = 1320;
 
 export type BossWaveConfig = {
   name: string;
@@ -118,10 +120,10 @@ export const BOSS_WAVE_CONFIGS: Record<number, BossWaveConfig> = {
     },
     skillLockWindow: 0.14,
     dashSpeed: {
-      normal: 620,
-      hard: 1400,
+      normal: 760,
+      hard: 1500,
     },
-    dashDuration: 0.72,
+    dashDuration: 1.05,
     supportXpReward: 28,
     supportHpScale: 0.52,
     supportDamageScale: 0.84,
@@ -953,6 +955,11 @@ function beginBossDash(state: GameState, boss: EnemyEntity, config: BossWaveConf
   });
 }
 
+function getBossDashDistance(state: GameState, boss: EnemyEntity, targetX: number, targetY: number): number {
+  const overrunDistance = state.player.radius + boss.radius * 1.35 + state.player.stats.moveSpeed * 0.9;
+  return Math.max(BOSS_DASH_MIN_DISTANCE, Math.min(BOSS_DASH_MAX_DISTANCE, distance(boss.x, boss.y, targetX, targetY) + overrunDistance));
+}
+
 function updateBossTeleport(state: GameState, boss: EnemyEntity, dt: number, config: BossWaveConfig): boolean {
   const timer = Math.max(0, (boss.bossActionTimer ?? resolveBossTimingValue(config.skillWindup, state.difficulty.id, 1.4)) - dt);
   boss.bossActionTimer = timer;
@@ -1030,7 +1037,7 @@ function updateBossDashWindup(state: GameState, boss: EnemyEntity, dt: number, c
   const targetX = boss.bossTargetX ?? state.player.x;
   const targetY = boss.bossTargetY ?? state.player.y;
   const direction = normalize(targetX - boss.x, targetY - boss.y);
-  const dashDistance = Math.max(320, Math.min(880, distance(boss.x, boss.y, targetX, targetY) + state.player.radius + boss.radius * 0.6));
+  const dashDistance = getBossDashDistance(state, boss, targetX, targetY);
 
   boss.bossDashDirectionX = direction.x;
   boss.bossDashDirectionY = direction.y;
@@ -2054,9 +2061,7 @@ function updatePickups(state: GameState, dt: number): void {
     const deltaX = player.x - pickup.x;
     const deltaY = player.y - pickup.y;
     const orbDistance = Math.hypot(deltaX, deltaY) || 1;
-    const attractDistance = state.relics.includes("magnetTendril") && pickup.type === "xp"
-      ? 99999
-      : player.stats.pickupRadius + 86;
+    const attractDistance = player.stats.pickupRadius + 86;
 
     if (orbDistance <= attractDistance) {
       const direction = normalize(deltaX, deltaY);

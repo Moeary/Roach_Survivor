@@ -51,12 +51,12 @@ export const RELIC_DEFS: RelicDefinition[] = [
     description: "受到伤害时有 12% 概率完全免疫。",
     category: "defensive",
   },
-  {
-    id: "magnetTendril",
-    name: "磁力触须",
-    description: "全屏自动吸取经验球。",
-    category: "utility",
-  },
+  // {
+  //   id: "magnetTendril",
+  //   name: "磁力触须",
+  //   description: "全屏自动吸取经验球。",
+  //   category: "utility",
+  // },
   {
     id: "speedPheromone",
     name: "加速信息素",

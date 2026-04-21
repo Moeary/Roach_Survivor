@@ -96,23 +96,77 @@ function BossTelegraphs({ enemies, state }: { enemies: EnemyEntity[]; state: Gam
         }
 
         if (enemy.bossAction === "dash-windup" && enemy.bossTargetX !== undefined && enemy.bossTargetY !== undefined) {
-          const deltaX = enemy.bossTargetX - enemy.x;
-          const deltaY = enemy.bossTargetY - enemy.y;
-          const length = Math.hypot(deltaX, deltaY);
-          const angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
+          const preview = getBossDashTelegraph(enemy, state);
+          const angle = (Math.atan2(preview.deltaY, preview.deltaX) * 180) / Math.PI;
           const width = enemy.radius + state.player.radius * 0.66;
 
           return (
             <g key={`${enemy.id}-dash-warning`} transform={`translate(${toFixed(enemy.x)} ${toFixed(enemy.y)}) rotate(${toFixed(angle)})`}>
-              <path d={`M 0 0 L ${toFixed(length)} 0`} stroke="rgba(255, 122, 68, 0.14)" strokeWidth={toFixed(width * 1.8)} strokeLinecap="round" />
-              <path d={`M 0 0 L ${toFixed(length)} 0`} stroke="rgba(255, 181, 126, 0.92)" strokeWidth="6" strokeDasharray="18 12" strokeLinecap="round" />
-              <circle cx={toFixed(length)} cy="0" r="18" fill="rgba(255, 178, 112, 0.12)" />
+              <path d={`M 0 0 L ${toFixed(preview.length)} 0`} stroke="rgba(255, 122, 68, 0.14)" strokeWidth={toFixed(width * 1.8)} strokeLinecap="round" />
+              <path d={`M 0 0 L ${toFixed(preview.length)} 0`} stroke="rgba(255, 181, 126, 0.92)" strokeWidth="6" strokeDasharray="18 12" strokeLinecap="round" />
+              <circle cx={toFixed(preview.length)} cy="0" r="18" fill="rgba(255, 178, 112, 0.12)" />
             </g>
           );
         }
 
         return null;
       })}
+    </g>
+  );
+}
+
+function getBossDashTelegraph(enemy: EnemyEntity, state: GameState): { deltaX: number; deltaY: number; length: number } {
+  const targetX = enemy.bossTargetX ?? state.player.x;
+  const targetY = enemy.bossTargetY ?? state.player.y;
+  const deltaX = targetX - enemy.x;
+  const deltaY = targetY - enemy.y;
+  const targetDistance = Math.hypot(deltaX, deltaY) || 1;
+  const overrunDistance = state.player.radius + enemy.radius * 1.35 + state.player.stats.moveSpeed * 0.9;
+  const length = Math.max(640, Math.min(1320, targetDistance + overrunDistance));
+
+  return {
+    deltaX,
+    deltaY,
+    length,
+  };
+}
+
+function BossOffscreenIndicator({ boss, camera, state }: { boss: EnemyEntity | null; camera: ReturnType<typeof getCamera>; state: GameState }) {
+  if (!boss) {
+    return null;
+  }
+
+  const width = state.viewport.width;
+  const height = state.viewport.height;
+  const screenX = boss.x - camera.x + width / 2;
+  const screenY = boss.y - camera.y + height / 2;
+  const edgePadding = 52;
+  const isInView = screenX >= boss.radius && screenX <= width - boss.radius && screenY >= boss.radius && screenY <= height - boss.radius;
+
+  if (isInView) {
+    return null;
+  }
+
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const deltaX = screenX - centerX;
+  const deltaY = screenY - centerY;
+  const ratioX = deltaX === 0 ? Number.POSITIVE_INFINITY : (width / 2 - edgePadding) / Math.abs(deltaX);
+  const ratioY = deltaY === 0 ? Number.POSITIVE_INFINITY : (height / 2 - edgePadding) / Math.abs(deltaY);
+  const ratio = Math.min(ratioX, ratioY);
+  const indicatorX = clamp(centerX + deltaX * ratio, edgePadding, width - edgePadding);
+  const indicatorY = clamp(centerY + deltaY * ratio, edgePadding, height - edgePadding);
+  const angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
+
+  return (
+    <g transform={`translate(${toFixed(indicatorX)} ${toFixed(indicatorY)})`}>
+      <circle r="34" fill="rgba(15, 18, 14, 0.78)" stroke="rgba(255, 184, 92, 0.7)" strokeWidth="2.5" />
+      <g transform={`rotate(${toFixed(angle)})`}>
+        <path d="M 25 0 L -10 -18 L -4 0 L -10 18 Z" fill="#ffcb6d" stroke="#2a160f" strokeWidth="2.2" strokeLinejoin="round" />
+      </g>
+      <text x="0" y="49" fill="#ffdb8e" fontSize="15" fontWeight="800" textAnchor="middle" letterSpacing="2">
+        BOSS
+      </text>
     </g>
   );
 }
@@ -322,6 +376,10 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
       resetInputState(inputRef.current);
     }
 
+    function handleContextMenu(event: MouseEvent) {
+      event.preventDefault();
+    }
+
     function frame(now: number) {
       const deltaSeconds = (now - lastFrameRef.current) / 1000;
       lastFrameRef.current = now;
@@ -343,12 +401,14 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("blur", handleBlur);
+    window.addEventListener("contextmenu", handleContextMenu);
     frameRef.current = window.requestAnimationFrame(frame);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("contextmenu", handleContextMenu);
 
       if (frameRef.current !== null) {
         window.cancelAnimationFrame(frameRef.current);
@@ -384,7 +444,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
   const overlayEffects = visibleEffects.filter((effect) => effect.type !== "blood-pool");
 
   return (
-    <main className={`game-screen ${input.aimActive ? "game-screen-aiming" : ""}`}>
+    <main className={`game-screen ${input.aimActive ? "game-screen-aiming" : ""}`} onContextMenu={(event) => event.preventDefault()}>
       <svg
         ref={svgRef}
         className="game-svg"
@@ -399,6 +459,11 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
         }}
         onMouseMove={(event) => updatePointerPosition(event.clientX, event.clientY)}
         onMouseDown={(event) => {
+          if (event.button !== 0) {
+            event.preventDefault();
+            return;
+          }
+
           audioRef.current?.unlock();
           updatePointerPosition(event.clientX, event.clientY);
           refresh();
@@ -421,6 +486,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
           <g><AimReticle state={state} input={input} /></g>
           <g>{overlayEffects.map((effect) => <EffectSprite key={effect.id} effect={effect} />)}</g>
         </g>
+        <BossOffscreenIndicator boss={boss} camera={camera} state={state} />
       </svg>
 
       {!input.aimActive && !input.autoAim && state.runState === "running" ? (
