@@ -7,6 +7,7 @@ import ChangelogModal from "./components/ChangelogModal";
 import EnemyCompendiumModal from "./components/EnemyCompendiumModal";
 import GameScreen from "./components/GameScreen";
 import MetaUpgradeModal from "./components/MetaUpgradeModal";
+import RelicCodexModal from "./components/RelicCodexModal";
 import SkinLabModal from "./components/SkinLabModal";
 import StartScreen from "./components/StartScreen";
 import TutorialModal from "./components/TutorialModal";
@@ -36,6 +37,7 @@ export default function App() {
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [compendiumOpen, setCompendiumOpen] = useState(false);
   const [metaUpgradeOpen, setMetaUpgradeOpen] = useState(false);
+  const [relicCodexOpen, setRelicCodexOpen] = useState(false);
   const [skinLabOpen, setSkinLabOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [volumeSettingsOpen, setVolumeSettingsOpen] = useState(false);
@@ -205,6 +207,7 @@ export default function App() {
             onOpenChangelog={() => { playMenuCue("uiOpen"); setChangelogOpen(true); }}
             onOpenCompendium={() => { playMenuCue("uiOpen"); setCompendiumOpen(true); }}
             onOpenMetaUpgrade={() => { playMenuCue("uiOpen"); setMetaUpgradeOpen(true); }}
+            onOpenRelicCodex={() => { playMenuCue("uiOpen"); setRelicCodexOpen(true); }}
             onOpenSkinLab={() => { playMenuCue("uiOpen"); setSkinLabOpen(true); }}
             onOpenTutorial={() => { playMenuCue("uiOpen"); setTutorialOpen(true); }}
             onOpenVolumeSettings={() => { playMenuCue("uiOpen"); setVolumeSettingsOpen(true); }}
@@ -230,6 +233,7 @@ export default function App() {
             onPurchase={upgradeMetaStat}
             onReset={resetAllMetaUpgrades}
           />
+          <RelicCodexModal isOpen={relicCodexOpen} onClose={() => setRelicCodexOpen(false)} />
           <SkinLabModal
             goldenEggs={profile.goldenEggs}
             isOpen={skinLabOpen}

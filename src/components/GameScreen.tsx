@@ -8,8 +8,6 @@ import {
   formatTime,
   getBoss,
   getCamera,
-  getPhaseLabel,
-  getStatusLabel,
   refreshUpgradeChoices,
   resetInputState,
   togglePause,
@@ -21,6 +19,7 @@ import { buildAchievementRunResult, type AchievementRunResult } from "../game/ac
 import { GameAudioController, getBgmTrackForState, type AudioSettings } from "../audio/gameAudio";
 import { summarizeUpgrades } from "../game/upgrades";
 import type { EnemyEntity, GameState, InputState, RunSetup } from "../game/types";
+import { RelicIcon, UpgradeIcon } from "./GameIcon";
 import EnemySprite from "./sprites/enemies/EnemySprite";
 import PlayerSprite from "./sprites/player/PlayerSprite";
 import EffectSprite from "./sprites/world/EffectSprite";
@@ -174,6 +173,48 @@ function BossOffscreenIndicator({ boss, camera, state }: { boss: EnemyEntity | n
 }
 
 const MOVEMENT_KEY_CODES = ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+const HEART_COUNT = 10;
+const SKILL_HOTBAR_SLOTS = 8;
+const RELIC_HOTBAR_SLOTS = 5;
+
+function HealthHeart({ fill, index }: { fill: number; index: number }) {
+  const clipId = `heart-fill-${index}`;
+  const width = clamp(fill, 0, 1) * 64;
+
+  return (
+    <svg className="heart-icon" viewBox="0 0 64 64" aria-hidden="true">
+      <defs>
+        <clipPath id={clipId}>
+          <rect x="0" y="0" width={toFixed(width)} height="64" />
+        </clipPath>
+      </defs>
+      <path
+        className="heart-icon-empty"
+        d="M32 53 C17 42 10 34 10 23 C10 15 16 10 23 10 C27 10 30 12 32 16 C34 12 37 10 41 10 C48 10 54 15 54 23 C54 34 47 42 32 53 Z"
+      />
+      <path
+        className="heart-icon-fill"
+        clipPath={`url(#${clipId})`}
+        d="M32 53 C17 42 10 34 10 23 C10 15 16 10 23 10 C27 10 30 12 32 16 C34 12 37 10 41 10 C48 10 54 15 54 23 C54 34 47 42 32 53 Z"
+      />
+      <path
+        className="heart-icon-stroke"
+        d="M32 53 C17 42 10 34 10 23 C10 15 16 10 23 10 C27 10 30 12 32 16 C34 12 37 10 41 10 C48 10 54 15 54 23 C54 34 47 42 32 53 Z"
+      />
+    </svg>
+  );
+}
+
+function HealthHearts({ current, max }: { current: number; max: number }) {
+  return (
+    <div className="heart-row" aria-label={`生命值 ${Math.ceil(current)} / ${max}`}>
+      {Array.from({ length: HEART_COUNT }, (_, index) => {
+        const heartValue = (current / Math.max(1, max)) * HEART_COUNT - index;
+        return <HealthHeart key={index} fill={heartValue} index={index} />;
+      })}
+    </div>
+  );
+}
 
 export default function GameScreen({ audioSettings, onAwardGoldenEggs, onCompleteRun, onReturnToMenu, setup }: GameScreenProps) {
   const stateRef = useRef<GameState>(createGameState(setup));
@@ -446,14 +487,18 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
   const translateY = state.viewport.height / 2 - camera.y;
   const boss = getBoss(state);
   const summary = summarizeUpgrades(state);
-  const healthRatio = clamp(state.player.hp / state.player.maxHp, 0, 1);
   const xpRatio = clamp(state.xp / state.xpToNext, 0, 1);
+  const xpRemaining = Math.max(0, state.xpToNext - state.xp);
   const nextBossTime = getBossWaveTime(state.bossWavesSpawned + 1);
   const fastForwardTarget = Math.max(0, nextBossTime - 5);
   const canFastForward = state.runState === "running" && !state.bossSpawned && state.bossWavesSpawned < state.difficulty.bossWaves && state.timer < fastForwardTarget;
   const targetText = `存活 ${formatTime(state.runDuration)} 并击败 ${state.difficulty.bossWaves} 波 Boss`;
-  const difficultyText = `${state.difficulty.label} / ${state.difficulty.bossWaves} 波 Boss`;
   const bossTitle = boss ? `${boss.name} 第 ${boss.bossWave ?? state.bossWavesSpawned} 波` : "";
+  const relicInventory = state.relics
+    .map((relicId) => RELIC_DEFS.find((relic) => relic.id === relicId))
+    .filter((relic): relic is (typeof RELIC_DEFS)[number] => Boolean(relic));
+  const skillPlaceholderCount = Math.max(0, SKILL_HOTBAR_SLOTS - summary.length);
+  const relicPlaceholderCount = Math.max(0, RELIC_HOTBAR_SLOTS - relicInventory.length);
   const visibleDecorations = state.decorations.filter((decoration) => isVisible(decoration.x, decoration.y, 88, state, 340));
   const visibleObstacles = state.obstacles.filter((obstacle) => isVisible(obstacle.x, obstacle.y, obstacle.radius * 1.4, state, 340));
   const visiblePickups = state.pickups.filter((pickup) => isVisible(pickup.x, pickup.y, pickup.radius, state));
@@ -515,51 +560,23 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
       ) : null}
 
       <div className="hud-top">
-        <div className="hud-cluster">
-          <div className="hud-pill">
-            <span>局势</span>
-            <strong>{getStatusLabel(state)}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>计时</span>
-            <strong>{formatTime(state.timer)}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>阶段</span>
-            <strong>{getPhaseLabel(state)}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>威胁</span>
-            <strong>{state.enemies.length}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>瞄准</span>
-            <strong>{input.autoAim ? "自瞄锁定" : input.aimActive ? "鼠标接管中" : "等待接管"}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>难度</span>
-            <strong>{difficultyText}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>金色卵鞘</span>
-            <strong>{state.runGoldenEggsCollected}</strong>
-          </div>
-        </div>
-
-        <div className="hud-target">
+        <section className="hud-objective" aria-label="局内目标">
           <button
-            className="hud-target-trigger"
+            className="hud-objective-trigger"
             type="button"
             onClick={fastForwardToNextBossPrep}
             disabled={!canFastForward}
             title={canFastForward ? `作弊：快进到 ${formatTime(fastForwardTarget)}` : "当前不可快进"}
             aria-label={canFastForward ? `作弊：快进到 ${formatTime(fastForwardTarget)}` : "当前不可快进"}
           >
-            目标
+            局内目标
           </button>
           <strong>{targetText}</strong>
-          <em>F 自瞄 / Esc 释放鼠标 / P 暂停</em>
-        </div>
+          <div className="hud-objective-row">
+            <span>当前时间 <b>{formatTime(state.timer)}</b></span>
+            <span>还剩敌人 <b>{state.enemies.length}</b></span>
+          </div>
+        </section>
       </div>
 
       {boss ? (
@@ -577,60 +594,48 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
       ) : null}
 
       <div className="hud-bottom">
-        <section className="hud-stack hud-stack-left">
-          <div className="hud-card">
-            <div className="hud-card-head">
-              <span>生命值</span>
-              <strong>
-                {Math.ceil(state.player.hp)} / {state.player.maxHp}
-              </strong>
-            </div>
-            <div className="meter-shell">
-              <div className="meter-fill meter-fill-health" style={{ width: `${(healthRatio * 100).toFixed(1)}%` }} />
-            </div>
+        <section className="minecraft-hud" aria-label="战斗状态栏">
+          <div className="minecraft-health-row">
+            <HealthHearts current={state.player.hp} max={state.player.maxHp} />
+            <span>{Math.ceil(state.player.hp)} / {state.player.maxHp}</span>
           </div>
 
-          <div className="hud-card">
-            <div className="hud-card-head">
-              <span>经验值</span>
-              <strong>
-                {state.xp} / {state.xpToNext}
-              </strong>
-            </div>
-            <div className="meter-shell">
-              <div className="meter-fill meter-fill-xp" style={{ width: `${(xpRatio * 100).toFixed(1)}%` }} />
-            </div>
-          </div>
-        </section>
-
-        <section className="hud-card build-card">
-          <div className="hud-card-head">
-            <span>变异摘要</span>
+          <div className="minecraft-xp-row">
             <strong>Lv.{state.level}</strong>
-          </div>
-          <div className="build-chip-row">
-            {summary.length ? (
-              summary.map((entry) => (
-                <span key={entry.id} className="build-chip">
-                  {entry.shortName} Lv.{entry.rank}
-                </span>
-              ))
-            ) : (
-              <span className="build-chip build-chip-muted">暂未变异</span>
-            )}
-          </div>
-          {state.relics.length > 0 ? (
-            <div className="relic-chip-row">
-              {state.relics.map((relicId) => {
-                const def = RELIC_DEFS.find((r) => r.id === relicId);
-                return def ? (
-                  <span key={relicId} className={`relic-chip relic-chip-${def.category}`} title={def.description}>
-                    {def.name}
-                  </span>
-                ) : null;
-              })}
+            <div className="minecraft-xp-track" aria-label={`经验值 ${state.xp} / ${state.xpToNext}`}>
+              <div className="minecraft-xp-fill" style={{ width: `${(xpRatio * 100).toFixed(1)}%` }} />
             </div>
-          ) : null}
+            <span>还差 {xpRemaining} EXP</span>
+          </div>
+
+          <div className="inventory-hotbar">
+            <div className="inventory-section inventory-section-skills" aria-label="技能栏">
+              {summary.map((entry) => (
+                <div key={entry.id} className="inventory-slot inventory-slot-filled" title={`${entry.name} Lv.${entry.rank}`}>
+                  <UpgradeIcon id={entry.id} className="inventory-icon" />
+                  <span className="inventory-slot-label">{entry.shortName}</span>
+                  <b className="inventory-slot-level">{entry.rank}</b>
+                </div>
+              ))}
+              {Array.from({ length: skillPlaceholderCount }, (_, index) => (
+                <div key={`skill-empty-${index}`} className="inventory-slot inventory-slot-empty" aria-hidden="true" />
+              ))}
+            </div>
+
+            <div className="inventory-divider" aria-hidden="true" />
+
+            <div className="inventory-section inventory-section-relics" aria-label="圣遗物栏">
+              {relicInventory.map((relic) => (
+                <div key={relic.id} className={`inventory-slot inventory-slot-filled inventory-slot-relic inventory-slot-relic-${relic.category}`} title={`${relic.name}：${relic.description}`}>
+                  <RelicIcon id={relic.id} className="inventory-icon" />
+                  <span className="inventory-slot-label">{relic.name}</span>
+                </div>
+              ))}
+              {Array.from({ length: relicPlaceholderCount }, (_, index) => (
+                <div key={`relic-empty-${index}`} className="inventory-slot inventory-slot-empty inventory-slot-empty-relic" aria-hidden="true" />
+              ))}
+            </div>
+          </div>
         </section>
       </div>
 
@@ -651,7 +656,10 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
                 <div className="choice-grid">
                   {state.upgradeChoices.map((choice, index) => (
                     <button key={choice.id} className="choice-card" type="button" onClick={() => chooseUpgradeByIndex(index)}>
-                      <span className="choice-hotkey">{index + 1}</span>
+                      <div className="choice-card-top">
+                        <UpgradeIcon id={choice.id} className="choice-icon" />
+                        <span className="choice-hotkey">{index + 1}</span>
+                      </div>
                       <h3>{choice.name}</h3>
                       <p>{choice.description}</p>
                       <p className="overlay-copy">
@@ -671,7 +679,10 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
                 <div className="choice-grid">
                   {state.relicChoices.map((choice, index) => (
                     <button key={choice.id} className="choice-card relic-card" type="button" onClick={() => chooseRelicByIndex(index)}>
-                      <span className="choice-hotkey">{index + 1}</span>
+                      <div className="choice-card-top">
+                        <RelicIcon id={choice.id} className="choice-icon" />
+                        <span className="choice-hotkey">{index + 1}</span>
+                      </div>
                       <span className={`relic-category relic-category-${choice.category}`}>{choice.category === "offensive" ? "进攻" : choice.category === "defensive" ? "防御" : choice.category === "utility" ? "功能" : "风险"}</span>
                       <h3>{choice.name}</h3>
                       <p>{choice.description}</p>

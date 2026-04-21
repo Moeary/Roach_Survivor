@@ -1459,6 +1459,378 @@ select {
   line-height: 1.5;
 }
 
+.game-icon {
+  display: block;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.32));
+}
+
+.game-icon-locked {
+  opacity: 0.42;
+  filter: grayscale(0.75) drop-shadow(0 8px 12px rgba(0, 0, 0, 0.28));
+}
+
+.buff-card-headline,
+.achievement-card-headline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.buff-card-icon,
+.achievement-card-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.choice-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.choice-icon {
+  width: 58px;
+  height: 58px;
+}
+
+.choice-card-top .choice-hotkey {
+  margin-bottom: 0;
+}
+
+.relic-codex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.relic-codex-card {
+  display: flex;
+  gap: 14px;
+  min-height: 156px;
+  padding: 16px;
+  border: 1px solid rgba(214, 239, 109, 0.12);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.relic-codex-card-offensive {
+  border-color: rgba(255, 100, 80, 0.24);
+}
+
+.relic-codex-card-defensive {
+  border-color: rgba(80, 180, 255, 0.24);
+}
+
+.relic-codex-card-utility {
+  border-color: rgba(100, 220, 100, 0.24);
+}
+
+.relic-codex-card-risk {
+  border-color: rgba(180, 140, 255, 0.28);
+}
+
+.relic-codex-icon {
+  width: 58px;
+  height: 58px;
+}
+
+.relic-codex-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.relic-codex-copy span {
+  color: var(--lime);
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.relic-codex-copy h3 {
+  margin: 0;
+  font-size: 1.24rem;
+}
+
+.relic-codex-copy p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.hud-objective,
+.minecraft-hud {
+  pointer-events: auto;
+}
+
+.hud-objective {
+  width: min(430px, calc(100vw - 40px));
+  padding: 14px 16px;
+  border: 2px solid rgba(0, 0, 0, 0.72);
+  border-radius: 6px;
+  color: #f4f1dc;
+  background:
+    linear-gradient(180deg, rgba(33, 38, 31, 0.92), rgba(12, 15, 13, 0.94)),
+    rgba(12, 15, 13, 0.94);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.08),
+    0 18px 36px rgba(0, 0, 0, 0.42);
+}
+
+.hud-objective-trigger {
+  display: block;
+  margin: 0 0 6px;
+  padding: 0;
+  border: 0;
+  color: #d7f06d;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: transparent;
+}
+
+.hud-objective-trigger:hover,
+.hud-objective-trigger:focus-visible {
+  outline: none;
+  color: #ffcb6d;
+}
+
+.hud-objective-trigger:disabled {
+  cursor: default;
+  color: #d7f06d;
+}
+
+.hud-objective strong {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.36;
+}
+
+.hud-objective-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+.hud-objective-row span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.hud-objective-row b {
+  color: #f4f1dc;
+  font-variant-numeric: tabular-nums;
+}
+
+.minecraft-hud {
+  display: grid;
+  gap: 7px;
+  width: min(1120px, calc(100vw - 32px));
+  margin: 0 auto;
+  justify-items: center;
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.48));
+}
+
+.minecraft-health-row,
+.minecraft-xp-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 26px;
+  color: #f4f1dc;
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.72);
+}
+
+.heart-row {
+  display: grid;
+  grid-template-columns: repeat(10, 24px);
+  gap: 3px;
+}
+
+.heart-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.heart-icon-empty {
+  fill: rgba(51, 23, 22, 0.72);
+}
+
+.heart-icon-fill {
+  fill: #e45444;
+}
+
+.heart-icon-stroke {
+  fill: none;
+  stroke: rgba(255, 218, 204, 0.72);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+.minecraft-xp-row {
+  width: min(640px, 100%);
+}
+
+.minecraft-xp-row strong,
+.minecraft-xp-row span {
+  min-width: 84px;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.minecraft-xp-row strong {
+  color: #d7f06d;
+  text-align: right;
+}
+
+.minecraft-xp-row span {
+  color: #d8e9af;
+}
+
+.minecraft-xp-track {
+  overflow: hidden;
+  flex: 1 1 auto;
+  height: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.82);
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 12px, rgba(0, 0, 0, 0.16) 12px 14px),
+    rgba(38, 39, 32, 0.94);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.minecraft-xp-fill {
+  height: 100%;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 10px, rgba(255, 255, 255, 0.02) 10px 12px),
+    linear-gradient(90deg, #6cc54f, #d7f06d);
+}
+
+.inventory-hotbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  max-width: 100%;
+  padding: 8px;
+  overflow-x: auto;
+  border: 3px solid rgba(0, 0, 0, 0.82);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(61, 62, 57, 0.94), rgba(34, 35, 32, 0.96)),
+    #30312d;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    0 20px 36px rgba(0, 0, 0, 0.42);
+}
+
+.inventory-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inventory-divider {
+  width: 3px;
+  height: 54px;
+  margin: 0 3px;
+  background: rgba(0, 0, 0, 0.56);
+  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.14);
+}
+
+.inventory-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  border: 2px solid rgba(12, 13, 12, 0.92);
+  border-radius: 4px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 48%),
+    #1b1d1a;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.16),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.44);
+}
+
+.inventory-slot-filled {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(215, 240, 109, 0.14), transparent 58%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.13), transparent 48%),
+    #20241d;
+}
+
+.inventory-slot-relic {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(184, 150, 255, 0.16), transparent 58%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.13), transparent 48%),
+    #211f27;
+}
+
+.inventory-slot-empty {
+  opacity: 0.58;
+}
+
+.inventory-slot-empty::after {
+  content: "";
+  width: 24px;
+  height: 24px;
+  border: 2px dashed rgba(244, 241, 220, 0.12);
+  border-radius: 4px;
+}
+
+.inventory-icon {
+  width: 46px;
+  height: 46px;
+}
+
+.inventory-slot-label {
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  left: 4px;
+  overflow: hidden;
+  color: rgba(244, 241, 220, 0.82);
+  font-size: 0.55rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: left;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.82);
+  white-space: nowrap;
+}
+
+.inventory-slot-level {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border: 2px solid rgba(0, 0, 0, 0.82);
+  border-radius: 999px;
+  color: #10150f;
+  font-size: 0.78rem;
+  line-height: 1;
+  background: linear-gradient(135deg, #d7f06d, #ffcb6d);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.36);
+}
+
 @media (max-width: 1024px) {
   .hero-main {
     grid-template-columns: 1fr;
@@ -1579,11 +1951,59 @@ select {
     top: 152px;
     width: calc(100vw - 28px);
   }
+
+  .minecraft-hud {
+    width: calc(100vw - 28px);
+  }
+
+  .inventory-hotbar {
+    justify-content: flex-start;
+  }
+
+  .relic-codex-card {
+    min-height: auto;
+  }
 }
 
 @media (max-width: 640px) {
   .buff-grid,
   .modal-run-buffs .buff-grid {
     grid-template-columns: 1fr;
+  }
+
+  .minecraft-health-row,
+  .minecraft-xp-row {
+    gap: 6px;
+  }
+
+  .heart-row {
+    grid-template-columns: repeat(10, 20px);
+    gap: 2px;
+  }
+
+  .heart-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .minecraft-xp-row strong,
+  .minecraft-xp-row span {
+    min-width: 62px;
+    font-size: 0.76rem;
+  }
+
+  .inventory-slot {
+    flex-basis: 52px;
+    width: 52px;
+    height: 52px;
+  }
+
+  .inventory-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .inventory-divider {
+    height: 50px;
   }
 }

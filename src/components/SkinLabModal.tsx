@@ -31,12 +31,12 @@ export default function SkinLabModal({
         aria-modal="true"
         className="tutorial-modal modal-wide modal-skin-lab"
         role="dialog"
-        aria-label="广东人的神必实验室"
+        aria-label="广Door人的神必实验室"
         onClick={(event) => event.stopPropagation()}
       >
         <p className="menu-eyebrow">SKIN LAB</p>
-        <h2>广东人的神必实验室</h2>
-        <p className="modal-copy">花金色卵鞘解锁新皮肤，已拥有的皮肤可以随时切换，右侧展示柜会同步更新当前装备。</p>
+        <h2>广Door人的神必实验室</h2>
+        <p className="modal-copy">花费金色卵鞘解锁新皮肤，已拥有的皮肤可以随时切换，右侧展示柜会同步更新当前装备。</p>
 
         <div className="buff-modal-head">
           <strong>当前库存 {goldenEggs} 枚金色卵鞘</strong>

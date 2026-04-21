@@ -17,6 +17,7 @@ interface StartScreenProps {
   onOpenChangelog: () => void;
   onOpenCompendium: () => void;
   onOpenMetaUpgrade: () => void;
+  onOpenRelicCodex: () => void;
   onOpenSkinLab: () => void;
   onOpenTutorial: () => void;
   onOpenVolumeSettings: () => void;
@@ -38,6 +39,7 @@ export default function StartScreen({
   onOpenChangelog,
   onOpenCompendium,
   onOpenMetaUpgrade,
+  onOpenRelicCodex,
   onOpenSkinLab,
   onOpenTutorial,
   onOpenVolumeSettings,
@@ -75,6 +77,9 @@ export default function StartScreen({
               </button>
               <button className="button-secondary" type="button" onClick={onOpenCompendium}>
                 怪物图鉴
+              </button>
+              <button className="button-secondary" type="button" onClick={onOpenRelicCodex}>
+                圣遗物图鉴
               </button>
               <button className="button-secondary" type="button" onClick={onOpenAchievements}>
                 成就档案

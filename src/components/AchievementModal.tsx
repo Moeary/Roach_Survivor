@@ -1,5 +1,6 @@
 import { ACHIEVEMENT_DEFS, ACHIEVEMENT_TIERS, getAchievementUnlockCount } from "../game/achievements";
 import type { AchievementUnlocks } from "../game/types";
+import { AchievementIcon } from "./GameIcon";
 
 interface AchievementModalProps {
   achievements: AchievementUnlocks;
@@ -53,8 +54,13 @@ export default function AchievementModal({ achievements, isOpen, onClose }: Achi
 
                     return (
                       <article key={achievement.id} className={`achievement-card ${unlocked ? "achievement-card-unlocked" : ""}`}>
-                        <span>{achievement.shortName}</span>
-                        <h3>{achievement.name}</h3>
+                        <div className="achievement-card-headline">
+                          <AchievementIcon id={achievement.id} className="achievement-card-icon" locked={!unlocked} />
+                          <div>
+                            <span>{achievement.shortName}</span>
+                            <h3>{achievement.name}</h3>
+                          </div>
+                        </div>
                         <p>{achievement.description}</p>
                         <strong>{unlocked ? "已完成" : "未完成"}</strong>
                       </article>
