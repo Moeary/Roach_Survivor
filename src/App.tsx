@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { GameAudioController, loadAudioSettings, normalizeAudioSettings, saveAudioSettings, type AudioSettings } from "./audio/gameAudio";
+import AchievementModal from "./components/AchievementModal";
 import BuffSetupModal from "./components/BuffSetupModal";
 import ChangelogModal from "./components/ChangelogModal";
 import EnemyCompendiumModal from "./components/EnemyCompendiumModal";
@@ -10,7 +11,8 @@ import SkinLabModal from "./components/SkinLabModal";
 import StartScreen from "./components/StartScreen";
 import TutorialModal from "./components/TutorialModal";
 import VolumeSettingsModal from "./components/VolumeSettingsModal";
-import { addGoldenEggs, loadMetaProfile, PLAYER_SKIN_DEFS, purchaseMetaUpgrade, purchasePlayerSkin, resetMetaUpgrades, saveMetaProfile, selectPlayerSkin } from "./game/meta";
+import { addGoldenEggs, applyAchievementUnlocksToProfile, loadMetaProfile, PLAYER_SKIN_DEFS, purchaseMetaUpgrade, purchasePlayerSkin, resetMetaUpgrades, saveMetaProfile, selectPlayerSkin } from "./game/meta";
+import { getUnlockedAchievementIdsForRun, type AchievementRunResult } from "./game/achievements";
 import { ALL_UPGRADE_IDS, DEFAULT_RUN_SETUP } from "./game/run/config";
 import type { DifficultyId, MetaUpgradeId, PlayerSkinId, UpgradeId } from "./game/types";
 
@@ -30,6 +32,7 @@ export default function App() {
   const [profile, setProfile] = useState(() => loadMetaProfile());
   const [screen, setScreen] = useState<"menu" | "game">("menu");
   const [buffSetupOpen, setBuffSetupOpen] = useState(false);
+  const [achievementOpen, setAchievementOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [compendiumOpen, setCompendiumOpen] = useState(false);
   const [metaUpgradeOpen, setMetaUpgradeOpen] = useState(false);
@@ -112,6 +115,13 @@ export default function App() {
     setProfile((current) => addGoldenEggs(current, amount));
   }
 
+  function completeRun(result: AchievementRunResult) {
+    setProfile((current) => {
+      const achievementIds = getUnlockedAchievementIdsForRun(current.achievements, result);
+      return achievementIds.length > 0 ? applyAchievementUnlocksToProfile(current, achievementIds) : current;
+    });
+  }
+
   function upgradeMetaStat(upgradeId: MetaUpgradeId) {
     setProfile((current) => {
       const next = purchaseMetaUpgrade(current, upgradeId);
@@ -190,6 +200,7 @@ export default function App() {
             totalBuffCount={ALL_UPGRADE_IDS.length}
             totalSkinCount={PLAYER_SKIN_DEFS.length}
             unlockedSkinCount={profile.unlockedSkinIds.length}
+            onOpenAchievements={() => { playMenuCue("uiOpen"); setAchievementOpen(true); }}
             onOpenBuffSetup={() => { playMenuCue("uiOpen"); setBuffSetupOpen(true); }}
             onOpenChangelog={() => { playMenuCue("uiOpen"); setChangelogOpen(true); }}
             onOpenCompendium={() => { playMenuCue("uiOpen"); setCompendiumOpen(true); }}
@@ -201,6 +212,7 @@ export default function App() {
             onSelectDifficulty={selectDifficulty}
             onStart={startGame}
           />
+          <AchievementModal achievements={profile.achievements} isOpen={achievementOpen} onClose={() => setAchievementOpen(false)} />
           <BuffSetupModal
             isOpen={buffSetupOpen}
             onClose={() => setBuffSetupOpen(false)}
@@ -238,7 +250,7 @@ export default function App() {
           />
         </>
       ) : (
-        <GameScreen key={runKey} audioSettings={audioSettings} onAwardGoldenEggs={awardGoldenEggs} onReturnToMenu={returnToMenu} setup={runSetup} />
+        <GameScreen key={runKey} audioSettings={audioSettings} onAwardGoldenEggs={awardGoldenEggs} onCompleteRun={completeRun} onReturnToMenu={returnToMenu} setup={runSetup} />
       )}
       {analyticsEnabled ? <Analytics mode={import.meta.env.DEV ? "development" : "production"} /> : null}
     </div>

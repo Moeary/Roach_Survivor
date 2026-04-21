@@ -15,11 +15,14 @@ export const ENEMY_APPEAR_AT: Record<Exclude<EnemyTypeId, "boss">, number> = {
   brute: STAGE_TWO_START_TIME,
   stinger: STAGE_TWO_START_TIME,
   hunter: STAGE_TWO_START_TIME,
+  splitter: STAGE_TWO_START_TIME,
+  sludge: STAGE_TWO_START_TIME,
   razor: STAGE_THREE_START_TIME,
   carrier: STAGE_THREE_START_TIME,
   behemoth: STAGE_THREE_START_TIME,
   phantom: STAGE_THREE_START_TIME,
   artillery: STAGE_THREE_START_TIME,
+  shade: STAGE_THREE_START_TIME,
 };
 
 export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
@@ -197,6 +200,39 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDefinition> = {
       projectileTint: "#ff7a5c",
     },
   },
+  splitter: {
+    id: "splitter",
+    name: "裂囊孵化体",
+    radius: 27,
+    hp: 86,
+    speed: 82,
+    damage: 10,
+    xp: 6,
+    tint: "#8f9a4a",
+    bloodTint: "#c8df60",
+  },
+  shade: {
+    id: "shade",
+    name: "黑须潜伏者",
+    radius: 19,
+    hp: 94,
+    speed: 118,
+    damage: 13,
+    xp: 9,
+    tint: "#5f6f82",
+    bloodTint: "#9fb8e7",
+  },
+  sludge: {
+    id: "sludge",
+    name: "腐浆拖行者",
+    radius: 31,
+    hp: 150,
+    speed: 58,
+    damage: 9,
+    xp: 8,
+    tint: "#5d7f38",
+    bloodTint: "#91da58",
+  },
   boss: {
     id: "boss",
     name: "母巢女王",
@@ -247,6 +283,8 @@ export function pickEnemyTypeForTime(timer: number): EnemyTypeId {
       { id: "brute", weight: 11 + intensity * 4 },
       { id: "stinger", weight: 18 + intensity * 5 },
       { id: "hunter", weight: 6 + intensity * 4 },
+      { id: "splitter", weight: 7 + intensity * 4 },
+      { id: "sludge", weight: 5 + intensity * 3 },
     ]);
   }
 
@@ -265,5 +303,8 @@ export function pickEnemyTypeForTime(timer: number): EnemyTypeId {
     { id: "behemoth", weight: 6 + intensity * 4 },
     { id: "phantom", weight: 11 + intensity * 4 },
     { id: "artillery", weight: 5 + intensity * 4 },
+    { id: "splitter", weight: 7 },
+    { id: "sludge", weight: 7 + intensity * 3 },
+    { id: "shade", weight: 8 + intensity * 4 },
   ]);
 }

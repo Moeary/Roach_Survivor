@@ -12,6 +12,7 @@ interface StartScreenProps {
   totalBuffCount: number;
   totalSkinCount: number;
   unlockedSkinCount: number;
+  onOpenAchievements: () => void;
   onOpenBuffSetup: () => void;
   onOpenChangelog: () => void;
   onOpenCompendium: () => void;
@@ -32,6 +33,7 @@ export default function StartScreen({
   totalBuffCount,
   totalSkinCount,
   unlockedSkinCount,
+  onOpenAchievements,
   onOpenBuffSetup,
   onOpenChangelog,
   onOpenCompendium,
@@ -73,6 +75,9 @@ export default function StartScreen({
               </button>
               <button className="button-secondary" type="button" onClick={onOpenCompendium}>
                 怪物图鉴
+              </button>
+              <button className="button-secondary" type="button" onClick={onOpenAchievements}>
+                成就档案
               </button>
             </div>
 

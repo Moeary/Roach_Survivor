@@ -14,6 +14,9 @@ export type EnemyTypeId =
   | "spitter"
   | "hunter"
   | "artillery"
+  | "splitter"
+  | "shade"
+  | "sludge"
   | "boss";
 export type BossRole = "wave" | "summon";
 export type BossActionState = "chase" | "teleport-windup" | "teleport-recover" | "dash-windup" | "dash-active";
@@ -30,7 +33,35 @@ export type MetaUpgradeId =
   | "basePickupRadius"
   | "contactArmor"
   | "levelUpHeal";
-export type PlayerSkinId = "labStandard" | "pickleReporter";
+export type AchievementTierId = "northernMini" | "americanMantis" | "cantonTwinTail" | "terraFormars";
+export type AchievementId =
+  | "firstMolting"
+  | "hundredKills"
+  | "firstClear"
+  | "eggPocket"
+  | "normalClear"
+  | "twoBosses"
+  | "relicCollector"
+  | "mutationStack"
+  | "hardClear"
+  | "hardCollector"
+  | "lowDamageHard"
+  | "bossHunter"
+  | "hardFlawless"
+  | "hardStillness"
+  | "hardNoMeta"
+  | "hardOverkill";
+export type AchievementUnlocks = Partial<Record<AchievementId, boolean>>;
+export type PlayerSkinId =
+  | "labStandard"
+  | "pickleReporter"
+  | "roachGirl"
+  | "sewerKnight"
+  | "neonScout"
+  | "northernMini"
+  | "americanMantis"
+  | "cantonTwinTail"
+  | "terraChampion";
 export type GameEventType =
   | "playerShot"
   | "enemyDie"
@@ -199,6 +230,11 @@ export interface EnemyEntity extends EntityBase {
   summonBurst?: number;
   summonPool?: EnemyTypeId[];
   rangedTimer?: number;
+  specialTimer?: number;
+  trailTimer?: number;
+  specialState?: "stealth" | "normal";
+  splitDepth?: number;
+  bossPhase?: number;
   statusEffects: StatusEffect[];
 }
 
@@ -244,7 +280,7 @@ export interface PickupEntity {
 
 export interface EffectEntity {
   id: string;
-  type: "burst" | "lightning" | "splatter" | "blood-pool";
+  type: "burst" | "lightning" | "splatter" | "blood-pool" | "acid-pool";
   x: number;
   y: number;
   radius: number;
@@ -317,6 +353,7 @@ export interface MetaUpgradeLevels {
 export interface MetaProfile {
   goldenEggs: number;
   metaUpgrades: MetaUpgradeLevels;
+  achievements: AchievementUnlocks;
   unlockedSkinIds: PlayerSkinId[];
   selectedSkinId: PlayerSkinId;
 }
@@ -405,4 +442,6 @@ export interface SessionStats {
   projectilesFired: number;
   bossesDefeated: number;
   peakLevel: number;
+  usedMovementKeys: boolean;
+  usedCheat: boolean;
 }

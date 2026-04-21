@@ -17,6 +17,7 @@ import {
 } from "../game/core";
 import { RELIC_DEFS } from "../game/relics";
 import { getBossWaveTime } from "../game/stages";
+import { buildAchievementRunResult, type AchievementRunResult } from "../game/achievements";
 import { GameAudioController, getBgmTrackForState, type AudioSettings } from "../audio/gameAudio";
 import { summarizeUpgrades } from "../game/upgrades";
 import type { EnemyEntity, GameState, InputState, RunSetup } from "../game/types";
@@ -33,6 +34,7 @@ import WorldDefs from "./sprites/world/WorldDefs";
 interface GameScreenProps {
   audioSettings: AudioSettings;
   onAwardGoldenEggs: (amount: number) => void;
+  onCompleteRun: (result: AchievementRunResult) => void;
   onReturnToMenu: () => void;
   setup: RunSetup;
 }
@@ -171,13 +173,17 @@ function BossOffscreenIndicator({ boss, camera, state }: { boss: EnemyEntity | n
   );
 }
 
-export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnToMenu, setup }: GameScreenProps) {
+const MOVEMENT_KEY_CODES = ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+
+export default function GameScreen({ audioSettings, onAwardGoldenEggs, onCompleteRun, onReturnToMenu, setup }: GameScreenProps) {
   const stateRef = useRef<GameState>(createGameState(setup));
   const inputRef = useRef<InputState>(createInputState());
   const frameRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number>(performance.now());
+  const completionReportedRef = useRef(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const awardGoldenEggsRef = useRef(onAwardGoldenEggs);
+  const completeRunRef = useRef(onCompleteRun);
   const audioRef = useRef<GameAudioController | null>(null);
   const [, forceRender] = useState(0);
 
@@ -192,6 +198,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
   function restartRun() {
     stateRef.current = createGameState(setup);
     resetInputState(inputRef.current);
+    completionReportedRef.current = false;
     lastFrameRef.current = performance.now();
     refresh();
   }
@@ -254,6 +261,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
 
     audioRef.current?.unlock();
     audioRef.current?.playCue("cheat");
+    state.sessionStats.usedCheat = true;
     state.timer = targetTime;
     refresh();
     return true;
@@ -280,6 +288,10 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
   }, [onAwardGoldenEggs]);
 
   useEffect(() => {
+    completeRunRef.current = onCompleteRun;
+  }, [onCompleteRun]);
+
+  useEffect(() => {
     audioRef.current?.setSettings(audioSettings);
   }, [audioSettings]);
 
@@ -301,8 +313,12 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
       const code = event.code;
       audioRef.current?.unlock();
 
-      if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(code)) {
+      if (MOVEMENT_KEY_CODES.includes(code)) {
         event.preventDefault();
+
+        if (!event.repeat && state.runState === "running") {
+          state.sessionStats.usedMovementKeys = true;
+        }
       }
 
       if (code === "Escape" && inputRef.current.aimActive) {
@@ -394,6 +410,11 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
         }
       });
 
+      if (!completionReportedRef.current && (stateRef.current.runState === "won" || stateRef.current.runState === "lost")) {
+        completionReportedRef.current = true;
+        completeRunRef.current(buildAchievementRunResult(stateRef.current, setup));
+      }
+
       refresh();
       frameRef.current = window.requestAnimationFrame(frame);
     }
@@ -440,8 +461,8 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
   const visibleProjectiles = state.projectiles.filter((projectile) => isVisible(projectile.x, projectile.y, projectile.radius, state, 120));
   const visibleOrbitals = state.orbitals.filter((orbital) => isVisible(orbital.x, orbital.y, orbital.radius, state, 80));
   const visibleEffects = state.effects.filter((effect) => isVisible(effect.x, effect.y, effect.radius * 2, state, 160));
-  const groundEffects = visibleEffects.filter((effect) => effect.type === "blood-pool");
-  const overlayEffects = visibleEffects.filter((effect) => effect.type !== "blood-pool");
+  const groundEffects = visibleEffects.filter((effect) => effect.type === "blood-pool" || effect.type === "acid-pool");
+  const overlayEffects = visibleEffects.filter((effect) => effect.type !== "blood-pool" && effect.type !== "acid-pool");
 
   return (
     <main className={`game-screen ${input.aimActive ? "game-screen-aiming" : ""}`} onContextMenu={(event) => event.preventDefault()}>
@@ -693,6 +714,8 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
                   <div className="stats-item"><span>承受伤害</span><strong>{Math.round(state.sessionStats.damageTaken).toLocaleString()}</strong></div>
                   <div className="stats-item"><span>弹丸发射</span><strong>{state.sessionStats.projectilesFired}</strong></div>
                   <div className="stats-item"><span>金色卵鞘</span><strong>{state.runGoldenEggsCollected}</strong></div>
+                  <div className="stats-item"><span>移动键</span><strong>{state.sessionStats.usedMovementKeys ? "已使用" : "未使用"}</strong></div>
+                  <div className="stats-item"><span>快进测试</span><strong>{state.sessionStats.usedCheat ? "已使用" : "未使用"}</strong></div>
                 </div>
                 <div className="modal-actions">
                   <button className="button-primary" type="button" onClick={restartRun}>
@@ -719,6 +742,8 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
                   <div className="stats-item"><span>承受伤害</span><strong>{Math.round(state.sessionStats.damageTaken).toLocaleString()}</strong></div>
                   <div className="stats-item"><span>弹丸发射</span><strong>{state.sessionStats.projectilesFired}</strong></div>
                   <div className="stats-item"><span>金色卵鞘</span><strong>{state.runGoldenEggsCollected}</strong></div>
+                  <div className="stats-item"><span>移动键</span><strong>{state.sessionStats.usedMovementKeys ? "已使用" : "未使用"}</strong></div>
+                  <div className="stats-item"><span>快进测试</span><strong>{state.sessionStats.usedCheat ? "已使用" : "未使用"}</strong></div>
                 </div>
                 <div className="modal-actions">
                   <button className="button-primary" type="button" onClick={restartRun}>

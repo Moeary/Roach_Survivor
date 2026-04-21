@@ -7,6 +7,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "v0.10 Achievements, Mutants & Skin Rewards",
+    date: "2026-04-21",
+    summary: "新增分级成就、机制型敌人、三阶段最终 Boss 和更多可购买/成就奖励皮肤。",
+    items: [
+      "新增蟑螂档案成就系统，按北方迷你蟑螂、美洲大镰、广东双马尾、火星异种分级，并会在结算时自动判定。",
+      "火星异种档案加入无伤困难三 Boss、不按 WASD/方向键困难通关、零局外困难通关等极限成就；使用局内快进测试的局不会解锁成就。",
+      "新增裂囊孵化体、黑须潜伏者、腐浆拖行者三种机制型敌人，分别带死亡分裂、潜伏加速和腐蚀地面。",
+      "第三波 Boss 加入 60% / 30% 血量阶段转换，会更快召唤、释放腐蚀圈，并在最终阶段追加冲刺威胁。",
+      "皮肤实验室新增蟑螂娘、罐甲、霓虹等可购买外观，并加入北方迷你蟑螂、美洲大镰、广东双马尾、火星异种成就奖励皮肤。",
+      "项目当前版本更新为 v0.10。",
+    ],
+  },
+  {
     version: "v0.9 Build Polish & Balance Pass",
     date: "2026-04-16",
     summary: "重排 Buff 弹窗、补齐 Boss 与失败音效入口，并完成一轮局内外成长平衡调整。",

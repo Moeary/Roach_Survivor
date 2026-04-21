@@ -142,9 +142,18 @@ export const BOSS_WAVE_CONFIGS: Record<number, BossWaveConfig> = {
       hard: 116,
     },
     radius: 90,
+    skillCooldown: 5.2,
+    skillWindup: {
+      hard: 0.72,
+    },
+    skillLockWindow: 0.18,
+    dashSpeed: {
+      hard: 980,
+    },
+    dashDuration: 0.78,
     summonCooldown: 7.5,
     summonBurst: 4,
-    summonPool: ["razor", "phantom", "carrier", "behemoth"],
+    summonPool: ["razor", "phantom", "carrier", "behemoth", "shade", "sludge"],
     summonBossChance: 0.2,
   },
 };
@@ -338,6 +347,40 @@ function queueGameEvent(state: GameState, type: GameState["gameEvents"][number][
   state.nextGameEventId += 1;
 }
 
+function damagePlayer(state: GameState, rawDamage: number, tint = "#ff9c47", cooldown = CONTACT_COOLDOWN): boolean {
+  const { player } = state;
+
+  if (player.hp <= 0 || player.contactTimer > 0) {
+    return false;
+  }
+
+  if (state.relics.includes("stressDodge") && Math.random() < 0.12) {
+    player.contactTimer = cooldown * 0.5;
+    createEffect(state, { x: player.x, y: player.y, radius: player.radius * 1.4, tint: "#ffffff", duration: 0.18 });
+    return false;
+  }
+
+  let damage = rawDamage;
+
+  if (state.relics.includes("thickSkin")) {
+    damage = Math.max(1, damage - 4);
+  }
+
+  player.hp = Math.max(0, player.hp - damage);
+  player.contactTimer = cooldown;
+  state.sessionStats.damageTaken += damage;
+  queueGameEvent(state, "playerHurt", Number(damage.toFixed(1)));
+  createEffect(state, {
+    x: player.x,
+    y: player.y,
+    radius: player.radius * 1.2,
+    tint,
+    duration: 0.25,
+  });
+
+  return true;
+}
+
 export function drainGameEvents(state: GameState) {
   return state.gameEvents.splice(0, state.gameEvents.length);
 }
@@ -423,6 +466,8 @@ export function createGameState(setup?: RunSetup): GameState {
       projectilesFired: 0,
       bossesDefeated: 0,
       peakLevel: 1,
+      usedMovementKeys: false,
+      usedCheat: false,
     },
   };
 
@@ -701,6 +746,36 @@ function autoCollectGoldenEggs(state: GameState): void {
   });
 }
 
+function splitEnemyOnDeath(state: GameState, enemy: EnemyEntity): void {
+  if (enemy.type !== "splitter" || (enemy.splitDepth ?? 0) > 0) {
+    return;
+  }
+
+  const childTypes: EnemyTypeId[] = Math.random() < 0.45 ? ["skitter", "nymph"] : ["nymph", "nymph"];
+
+  childTypes.forEach((enemyTypeId, index) => {
+    const angle = (Math.PI * 2 * index) / childTypes.length + randomRange(-0.4, 0.4);
+    const position = {
+      x: enemy.x + Math.cos(angle) * (enemy.radius + 18),
+      y: enemy.y + Math.sin(angle) * (enemy.radius + 18),
+    };
+    const child = spawnEnemy(state, enemyTypeId, position);
+    child.maxHp = Math.max(10, Math.round(child.maxHp * 0.58));
+    child.hp = child.maxHp;
+    child.damage = Math.max(1, Math.round(child.damage * 0.74));
+    child.speed = Number((child.speed * 1.14).toFixed(1));
+    child.splitDepth = 1;
+  });
+
+  createEffect(state, {
+    x: enemy.x,
+    y: enemy.y,
+    radius: enemy.radius * 2.2,
+    tint: "#d4ef73",
+    duration: 0.32,
+  });
+}
+
 function defeatEnemy(state: GameState, enemy: EnemyEntity, cause: EnemyDefeatCause = "hit"): void {
   enemy.alive = false;
   state.sessionStats.kills += 1;
@@ -758,6 +833,7 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity, cause: EnemyDefeatCau
 
   dropXpOrbs(state, enemy.x, enemy.y, enemy.xp);
   maybeDropGoldenEgg(state, enemy);
+  splitEnemyOnDeath(state, enemy);
 
   if (state.relics.includes("bloodthirst")) {
     state.player.hp = Math.min(state.player.maxHp, state.player.hp + 3);
@@ -887,6 +963,11 @@ function spawnEnemy(state: GameState, enemyTypeId: EnemyTypeId, position?: { x: 
     summonBurst: undefined,
     summonPool: undefined,
     rangedTimer: template.ranged ? template.ranged.cooldown * (0.3 + Math.random() * 0.5) : undefined,
+    specialTimer: template.id === "shade" ? randomRange(1.4, 3.2) : undefined,
+    trailTimer: template.id === "sludge" ? randomRange(0.4, 1.2) : undefined,
+    specialState: template.id === "shade" ? "normal" : undefined,
+    splitDepth: template.id === "splitter" ? 0 : undefined,
+    bossPhase: template.id === "boss" ? 1 : undefined,
     statusEffects: [],
   };
 
@@ -1090,6 +1171,63 @@ function updateBossDashActive(state: GameState, boss: EnemyEntity, dt: number, c
   return true;
 }
 
+function updateBossPhase(state: GameState, boss: EnemyEntity): void {
+  if (boss.bossRole !== "wave" || boss.bossWave !== 3) {
+    return;
+  }
+
+  const hpRatio = boss.hp / boss.maxHp;
+  const nextPhase = hpRatio <= 0.3 ? 3 : hpRatio <= 0.6 ? 2 : 1;
+
+  if (boss.bossPhase === nextPhase) {
+    return;
+  }
+
+  boss.bossPhase = nextPhase;
+  boss.summonCooldown = nextPhase === 3 ? 4.4 : nextPhase === 2 ? 5.8 : 7.5;
+  boss.summonBurst = nextPhase === 3 ? 6 : nextPhase === 2 ? 5 : 4;
+  boss.summonTimer = Math.min(boss.summonTimer ?? boss.summonCooldown, boss.summonCooldown * 0.55);
+  boss.bossActionCooldown = Math.min(boss.bossActionCooldown ?? 0, nextPhase === 3 ? 1.4 : 2.1);
+
+  createEffect(state, {
+    x: boss.x,
+    y: boss.y,
+    radius: boss.radius * (nextPhase === 3 ? 3.2 : 2.5),
+    tint: nextPhase === 3 ? "#ff405d" : "#ffb25c",
+    duration: 0.62,
+    type: "lightning",
+  });
+  queueGameEvent(state, "bossSkillCharge");
+}
+
+function castBossAcidNova(state: GameState, boss: EnemyEntity): void {
+  const phase = boss.bossPhase ?? 1;
+  const poolCount = phase >= 3 ? 9 : 6;
+  const radius = phase >= 3 ? 58 : 48;
+  const ringDistance = boss.radius + (phase >= 3 ? 168 : 126);
+  const angleOffset = Math.atan2(state.player.y - boss.y, state.player.x - boss.x);
+
+  for (let index = 0; index < poolCount; index += 1) {
+    const angle = angleOffset + (Math.PI * 2 * index) / poolCount;
+    createAcidPool(
+      state,
+      boss.x + Math.cos(angle) * ringDistance,
+      boss.y + Math.sin(angle) * ringDistance,
+      radius,
+      phase >= 3 ? 5.8 : 4.8,
+    );
+  }
+
+  createEffect(state, {
+    x: boss.x,
+    y: boss.y,
+    radius: ringDistance + radius,
+    tint: phase >= 3 ? "#ff5267" : "#9cf36a",
+    duration: 0.32,
+  });
+  queueGameEvent(state, "bossSkillCast");
+}
+
 function updateBossAction(state: GameState, boss: EnemyEntity, dt: number): boolean {
   const bossWave = boss.bossWave ?? 1;
   const config = getBossWaveConfig(bossWave);
@@ -1133,6 +1271,17 @@ function updateBossAction(state: GameState, boss: EnemyEntity, dt: number): bool
     }
 
     beginBossDash(state, boss, config);
+    return true;
+  }
+
+  if (bossWave === 3 && (boss.bossActionCooldown ?? Number.POSITIVE_INFINITY) <= 0 && (boss.bossPhase ?? 1) >= 2) {
+    if ((boss.bossPhase ?? 1) >= 3 && playerDistance > boss.radius + state.player.radius + 210 && Math.random() < 0.42) {
+      beginBossDash(state, boss, config);
+      return true;
+    }
+
+    castBossAcidNova(state, boss);
+    boss.bossActionCooldown = (boss.bossPhase ?? 1) >= 3 ? 3.5 : 4.8;
     return true;
   }
 
@@ -1356,6 +1505,60 @@ function handlePlayerDeath(state: GameState): boolean {
   return true;
 }
 
+function createAcidPool(state: GameState, x: number, y: number, radius: number, duration = 4.6): void {
+  createEffect(state, {
+    x,
+    y,
+    radius,
+    tint: "#8ff15c",
+    duration,
+    type: "acid-pool",
+    seed: Math.random(),
+  });
+}
+
+function updateSpecialEnemyBehavior(state: GameState, enemy: EnemyEntity, dt: number): void {
+  if (enemy.type === "shade") {
+    enemy.specialTimer = (enemy.specialTimer ?? 2.4) - dt;
+
+    if (enemy.specialTimer <= 0) {
+      if (enemy.specialState === "stealth") {
+        enemy.specialState = "normal";
+        enemy.ignoresObstacles = false;
+        enemy.specialTimer = randomRange(2.1, 3.4);
+      } else {
+        enemy.specialState = "stealth";
+        enemy.ignoresObstacles = true;
+        enemy.specialTimer = randomRange(1, 1.55);
+        createEffect(state, {
+          x: enemy.x,
+          y: enemy.y,
+          radius: enemy.radius * 2.1,
+          tint: "#b7d7ff",
+          duration: 0.24,
+        });
+      }
+    }
+  }
+
+  if (enemy.type === "sludge") {
+    enemy.trailTimer = (enemy.trailTimer ?? 0.8) - dt;
+
+    if (enemy.trailTimer <= 0) {
+      createAcidPool(state, enemy.x, enemy.y, enemy.radius * 1.45, 4.8);
+      enemy.trailTimer = randomRange(1.05, 1.55);
+    }
+  }
+}
+
+function getEnemySpecialSpeedMultiplier(enemy: EnemyEntity): number {
+  if (enemy.type === "shade" && enemy.specialState === "stealth") {
+    return 1.72;
+  }
+
+  return 1;
+}
+
 function updateEnemies(state: GameState, dt: number): void {
   const { player } = state;
   const livingEnemies: EnemyEntity[] = [];
@@ -1373,12 +1576,19 @@ function updateEnemies(state: GameState, dt: number): void {
       }
     }
 
+    if (enemy.type !== "boss") {
+      updateSpecialEnemyBehavior(state, enemy, dt);
+    } else {
+      updateBossPhase(state, enemy);
+    }
+
     const handledBossAction = enemy.type === "boss" ? updateBossAction(state, enemy, dt) : false;
 
     if (!handledBossAction) {
       const direction = normalize(player.x - enemy.x, player.y - enemy.y);
       const ranged = ENEMY_TYPES[enemy.type].ranged;
       const statusSpeedMul = getEnemySpeedMultiplier(enemy);
+      const specialSpeedMul = getEnemySpecialSpeedMultiplier(enemy);
 
       if (ranged) {
         const distToPlayer = distance(enemy.x, enemy.y, player.x, player.y);
@@ -1386,8 +1596,8 @@ function updateEnemies(state: GameState, dt: number): void {
         const shouldHalt = !ranged.moveWhileFiring && distToPlayer <= ranged.stopDistance;
         const speedScale = shouldHalt ? 0 : ranged.moveWhileFiring && inRange ? 0.5 : 1;
 
-        enemy.vx = direction.x * enemy.speed * speedScale * statusSpeedMul;
-        enemy.vy = direction.y * enemy.speed * speedScale * statusSpeedMul;
+        enemy.vx = direction.x * enemy.speed * speedScale * statusSpeedMul * specialSpeedMul;
+        enemy.vy = direction.y * enemy.speed * speedScale * statusSpeedMul * specialSpeedMul;
         enemy.x += enemy.vx * dt;
         enemy.y += enemy.vy * dt;
 
@@ -1409,8 +1619,8 @@ function updateEnemies(state: GameState, dt: number): void {
       } else {
         const aggression = enemy.type === "boss" ? 1 : 1 + Math.min(0.35, state.timer * 0.0011);
 
-        enemy.vx = direction.x * enemy.speed * aggression * statusSpeedMul;
-        enemy.vy = direction.y * enemy.speed * aggression * statusSpeedMul;
+        enemy.vx = direction.x * enemy.speed * aggression * statusSpeedMul * specialSpeedMul;
+        enemy.vy = direction.y * enemy.speed * aggression * statusSpeedMul * specialSpeedMul;
         enemy.x += enemy.vx * dt;
         enemy.y += enemy.vy * dt;
 
@@ -2095,6 +2305,15 @@ function updatePickups(state: GameState, dt: number): void {
 function updateEffects(state: GameState, dt: number): void {
   state.effects.forEach((effect) => {
     effect.age += dt;
+
+    if (effect.type === "acid-pool" && state.player.alive && state.runState === "running") {
+      const poolFadeIn = Math.min(1, effect.age / 0.35);
+      const activeRadius = effect.radius * (0.58 + poolFadeIn * 0.42);
+
+      if (distance(effect.x, effect.y, state.player.x, state.player.y) <= activeRadius + state.player.radius * 0.55) {
+        damagePlayer(state, 7, "#9bf060", 0.48);
+      }
+    }
 
     if (effect.age >= effect.duration) {
       effect.alive = false;

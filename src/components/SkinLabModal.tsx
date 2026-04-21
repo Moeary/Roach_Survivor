@@ -47,9 +47,10 @@ export default function SkinLabModal({
           {PLAYER_SKIN_DEFS.map((skin) => {
             const isOwned = ownedSkinIds.includes(skin.id);
             const isSelected = selectedSkinId === skin.id;
-            const canAfford = goldenEggs >= skin.cost;
-            const buttonLabel = isSelected ? "当前装备" : isOwned ? "装备皮肤" : "购买并装备";
-            const buttonClassName = isOwned ? "button-secondary" : "button-primary";
+            const isAchievementReward = skin.unlockType === "achievement";
+            const canAfford = !isAchievementReward && goldenEggs >= skin.cost;
+            const buttonLabel = isSelected ? "当前装备" : isOwned ? "装备皮肤" : isAchievementReward ? "达成成就解锁" : "购买并装备";
+            const buttonClassName = isOwned || isAchievementReward ? "button-secondary" : "button-primary";
 
             return (
               <article key={skin.id} className={`skin-card ${isSelected ? "skin-card-selected" : ""}`}>
@@ -65,8 +66,8 @@ export default function SkinLabModal({
                 </div>
 
                 <div className="skin-card-meta">
-                  <strong>{skin.cost === 0 ? "默认解锁" : `${skin.cost} 金色卵鞘`}</strong>
-                  <span>{isSelected ? "当前装备中" : isOwned ? "已拥有" : canAfford ? "可购买" : "卵鞘不足"}</span>
+                  <strong>{isAchievementReward ? (skin.rewardDescription ?? "成就奖励") : skin.cost === 0 ? "默认解锁" : `${skin.cost} 金色卵鞘`}</strong>
+                  <span>{isSelected ? "当前装备中" : isOwned ? "已拥有" : isAchievementReward ? "成就奖励" : canAfford ? "可购买" : "卵鞘不足"}</span>
                 </div>
 
                 <div className="skin-card-actions">

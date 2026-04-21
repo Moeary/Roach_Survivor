@@ -1,4 +1,4 @@
-import { DEFAULT_PLAYER_SKIN_ID, EMPTY_META_UPGRADES, normalizeMetaUpgrades } from "../meta";
+import { DEFAULT_PLAYER_SKIN_ID, EMPTY_META_UPGRADES, PLAYER_SKIN_DEFS, normalizeMetaUpgrades } from "../meta";
 import { getRunDurationForBossWaves } from "../stages";
 import { UPGRADE_DEFS } from "../upgrades";
 import type { DifficultyConfig, DifficultyId, PlayerSkinId, RunSetup, UpgradeId } from "../types";
@@ -51,7 +51,7 @@ export const DEFAULT_RUN_SETUP: RunSetup = {
 };
 
 function isPlayerSkinId(value: unknown): value is PlayerSkinId {
-  return value === "labStandard" || value === "pickleReporter";
+  return typeof value === "string" && PLAYER_SKIN_DEFS.some((skin) => skin.id === value);
 }
 
 export function getDifficultyConfig(difficultyId: DifficultyId): DifficultyConfig {

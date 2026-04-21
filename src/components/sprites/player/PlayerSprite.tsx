@@ -6,7 +6,27 @@ function toFixed(value: number): number {
 }
 
 function getWorldSkinScale(skinId: PlayerSkinId): number {
-  return skinId === "pickleReporter" ? 0.41 : 0.5;
+  if (skinId === "pickleReporter") {
+    return 0.41;
+  }
+
+  if (skinId === "terraChampion") {
+    return 0.46;
+  }
+
+  if (skinId === "americanMantis") {
+    return 0.4;
+  }
+
+  if (skinId === "northernMini") {
+    return 0.56;
+  }
+
+  if (skinId === "roachGirl" || skinId === "cantonTwinTail") {
+    return 0.43;
+  }
+
+  return 0.5;
 }
 
 export default function PlayerSprite({ player, skinId = "labStandard" }: { player: PlayerEntity; skinId?: PlayerSkinId }) {

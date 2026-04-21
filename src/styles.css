@@ -940,9 +940,127 @@ select {
   background: rgba(255, 255, 255, 0.03);
 }
 
+.achievement-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 22px;
+  padding: 16px 18px;
+  border: 1px solid rgba(214, 239, 109, 0.14);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.achievement-summary strong {
+  color: var(--lime);
+  font-size: 1.16rem;
+}
+
+.achievement-summary span {
+  color: var(--muted);
+  text-align: right;
+}
+
+.achievement-tier-list {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.achievement-tier {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(214, 239, 109, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.achievement-tier-terraFormars {
+  border-color: rgba(255, 82, 82, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 82, 82, 0.08), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.03);
+}
+
+.achievement-tier-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.achievement-tier-head span {
+  display: block;
+  color: var(--lime);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.achievement-tier-head p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.52;
+}
+
+.achievement-tier-head strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.achievement-card {
+  display: grid;
+  gap: 8px;
+  min-height: 158px;
+  padding: 14px;
+  border: 1px solid rgba(214, 239, 109, 0.1);
+  border-radius: 18px;
+  background: rgba(8, 12, 10, 0.56);
+  opacity: 0.66;
+}
+
+.achievement-card-unlocked {
+  opacity: 1;
+  border-color: rgba(255, 203, 109, 0.25);
+  background:
+    linear-gradient(180deg, rgba(255, 203, 109, 0.08), rgba(255, 255, 255, 0.03)),
+    rgba(8, 12, 10, 0.56);
+}
+
+.achievement-card span {
+  color: var(--lime);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.achievement-card h3 {
+  margin: 0;
+  font-size: 1.08rem;
+}
+
+.achievement-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.48;
+}
+
+.achievement-card strong {
+  align-self: end;
+  color: #ffcb6d;
+}
+
 .skin-lab-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
   margin-top: 22px;
 }

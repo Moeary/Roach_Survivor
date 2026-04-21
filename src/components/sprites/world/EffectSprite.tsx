@@ -109,6 +109,24 @@ export default function EffectSprite({ effect }: { effect: EffectEntity }) {
     );
   }
 
+  if (effect.type === "acid-pool") {
+    const seed = effect.seed ?? 0.5;
+    const fadeIn = clamp(progress * 4, 0, 1);
+    const fadeOut = clamp((1 - progress) * 3, 0, 1);
+    const poolOpacity = Math.min(fadeIn, fadeOut) * 0.72;
+    const wobble = 1 + Math.sin((effect.age + seed) * 8) * 0.04;
+
+    return (
+      <g transform={`translate(${toFixed(effect.x)} ${toFixed(effect.y)})`} opacity={toFixed(poolOpacity)}>
+        <ellipse rx={toFixed(effect.radius * wobble)} ry={toFixed(effect.radius * 0.62)} fill={effect.tint} opacity="0.24" />
+        <ellipse rx={toFixed(effect.radius * 0.72)} ry={toFixed(effect.radius * 0.42)} fill={effect.tint} opacity="0.5" />
+        <ellipse cx={toFixed(effect.radius * 0.18)} cy={toFixed(-effect.radius * 0.08)} rx={toFixed(effect.radius * 0.22)} ry={toFixed(effect.radius * 0.12)} fill="#d9ff8e" opacity="0.48" />
+        <circle cx={toFixed(-effect.radius * 0.28)} cy={toFixed(effect.radius * 0.06)} r={toFixed(effect.radius * 0.08)} fill="#eaffb5" opacity="0.62" />
+        <ellipse rx={toFixed(effect.radius * 1.02)} ry={toFixed(effect.radius * 0.64)} fill="none" stroke="rgba(190, 255, 120, 0.56)" strokeWidth="2.4" strokeDasharray="9 8" />
+      </g>
+    );
+  }
+
   const radius = effect.radius * (0.5 + progress * 1.2);
 
   return (

@@ -159,20 +159,112 @@ function PickleReporterMascot({ blink, showGroundShadow }: { blink: boolean; sho
   );
 }
 
+function LabVariantMascot({ blink, showGroundShadow, skinId }: { blink: boolean; showGroundShadow: boolean; skinId: PlayerSkinId }) {
+  const isTerra = skinId === "terraChampion";
+  const isGirl = skinId === "roachGirl";
+  const isTwinTail = skinId === "cantonTwinTail";
+  const isMantis = skinId === "americanMantis";
+  const isMini = skinId === "northernMini";
+  const isKnight = skinId === "sewerKnight";
+  const isNeon = skinId === "neonScout";
+  const shellFill = isTerra ? "#171514" : isGirl || isTwinTail ? "#3a211f" : isKnight ? "#59646c" : isNeon ? "#173939" : isMantis ? "#47321e" : "#6b4a31";
+  const bellyFill = isTerra ? "#4b4039" : isGirl ? "#7d4b45" : isTwinTail ? "#663c52" : isKnight ? "#9aa5a8" : isNeon ? "#1e6560" : isMantis ? "#8a6a35" : "#a57a54";
+  const faceFill = isTerra ? "#2f2924" : isGirl || isTwinTail ? "#f0b792" : isKnight ? "#d7ded8" : "#f2bf8e";
+  const eyeFill = isTerra ? "#ff4b3f" : isNeon ? "#a8fff0" : "#171113";
+  const accent = isTerra ? "#ff6048" : isGirl ? "#f1d8d8" : isTwinTail ? "#ff8bd5" : isKnight ? "#d9f1f0" : isNeon ? "#7dffe7" : isMantis ? "#c8ef70" : "#ffe18a";
+  const scaleY = isMini ? 0.82 : isTerra ? 1.14 : 1;
+
+  return (
+    <g transform={`scale(${isMini ? 0.82 : 1} ${scaleY})`}>
+      {showGroundShadow ? <ellipse cx="0" cy={isTerra ? 82 : 70} rx={isTerra ? 52 : 38} ry="12" fill="rgba(0, 0, 0, 0.18)" /> : null}
+
+      {isGirl || isTwinTail ? (
+        <g fill="none" stroke={isTwinTail ? "#25121c" : "#211513"} strokeWidth="13" strokeLinecap="round">
+          <path d="M -20 -76 C -54 -96, -70 -60, -62 -18 C -58 18, -74 42, -92 64" />
+          <path d="M 20 -76 C 54 -96, 70 -60, 62 -18 C 58 18, 74 42, 92 64" />
+        </g>
+      ) : null}
+
+      <g fill="none" stroke={isTerra ? "#111" : "#171113"} strokeWidth={isTerra ? 8 : 4.8} strokeLinecap="round">
+        <path d={isMantis ? "M -18 -76 C -36 -108, -66 -124, -104 -132" : "M -10 -74 C -14 -106, -28 -124, -48 -142"} />
+        <path d={isMantis ? "M 18 -76 C 36 -108, 66 -124, 104 -132" : "M 10 -74 C 14 -106, 28 -124, 48 -142"} />
+      </g>
+
+      <g fill="none" stroke={isTerra ? "#191312" : isKnight ? "#3c4449" : "#171113"} strokeWidth={isTerra ? 10 : isMantis ? 7 : 5} strokeLinecap="round" strokeLinejoin="round">
+        <path d={isMantis ? "M -30 -8 L -96 -52 L -124 -18" : "M -24 -2 L -62 -32"} />
+        <path d={isMantis ? "M 30 -8 L 96 -52 L 124 -18" : "M 24 -2 L 62 -32"} />
+        <path d="M -28 28 L -76 42" />
+        <path d="M 28 28 L 76 42" />
+      </g>
+
+      <g>
+        <ellipse cx="0" cy="12" rx={isTerra ? 42 : 34} ry={isTerra ? 58 : 48} fill={shellFill} stroke="#171113" strokeWidth={isTerra ? 5.8 : 4.5} />
+        <ellipse cx="0" cy="12" rx={isTerra ? 28 : 24} ry={isTerra ? 46 : 39} fill={bellyFill} />
+        <path d="M 0 -26 C 12 -10, 16 8, 14 30 C 12 48, 6 62, 0 74 C -6 62, -12 48, -14 30 C -16 8, -12 -10, 0 -26" fill="none" stroke={accent} strokeWidth={isTerra ? 4.8 : 3.8} strokeLinecap="round" strokeLinejoin="round" opacity="0.86" />
+        {isKnight ? <path d="M -28 -2 H 28 M -24 22 H 24 M -18 46 H 18" stroke="#e7f2ed" strokeWidth="4" strokeLinecap="round" opacity="0.72" /> : null}
+        {isNeon ? <circle r="44" fill="none" stroke="#7dffe7" strokeWidth="3" strokeDasharray="8 10" opacity="0.5" /> : null}
+      </g>
+
+      <g transform={`translate(0 ${isTerra ? -58 : -50})`}>
+        <circle r={isTerra ? 34 : 35} fill={faceFill} stroke="#171113" strokeWidth="4.5" />
+        {isTerra ? <path d="M -22 10 C -8 22, 10 22, 24 8" fill="none" stroke={accent} strokeWidth="5" strokeLinecap="round" /> : null}
+        {isGirl ? <path d="M -30 -8 C -14 -28, 14 -28, 30 -8" fill="none" stroke="#211513" strokeWidth="12" strokeLinecap="round" /> : null}
+        {isTwinTail ? <path d="M -32 -6 C -16 -30, 16 -30, 32 -6" fill="none" stroke="#2b1730" strokeWidth="12" strokeLinecap="round" /> : null}
+        {blink ? (
+          <g fill="none" stroke="#171113" strokeWidth="4" strokeLinecap="round">
+            <path d="M -14 -4 H -4" />
+            <path d="M 4 -4 H 14" />
+          </g>
+        ) : (
+          <>
+            <circle cx="-9" cy="-4" r={isTerra ? 4.8 : 3.7} fill={eyeFill} />
+            <circle cx="9" cy="-4" r={isTerra ? 4.8 : 3.7} fill={eyeFill} />
+          </>
+        )}
+        <path d={isTerra ? "M -10 17 C -3 12, 3 12, 10 17" : "M -7 15 C -5 25, 5 25, 7 15"} fill="none" stroke="#171113" strokeWidth="4.2" strokeLinecap="round" />
+        {isTwinTail ? <g fill={accent}><circle cx="-27" cy="-4" r="5" /><circle cx="27" cy="-4" r="5" /></g> : null}
+      </g>
+
+      {isGirl ? (
+        <path d="M -24 40 C -10 56, 10 56, 24 40 L 32 72 H -32 Z" fill="#e8e2dc" stroke="#171113" strokeWidth="4" strokeLinejoin="round" />
+      ) : null}
+
+      <g transform="translate(0 66)" fill="none" stroke={isTerra ? "#171113" : "#171113"} strokeWidth={isTerra ? 8 : 4.8} strokeLinecap="round" strokeLinejoin="round">
+        <path d={isTerra ? "M -18 -8 L -34 44" : "M -10 -10 L -14 34"} />
+        <path d={isTerra ? "M 18 -8 L 34 44" : "M 10 -10 L 14 34"} />
+        {isMantis ? <path d="M -54 8 L -86 42 M 54 8 L 86 42" stroke="#c8ef70" strokeWidth="7" /> : null}
+      </g>
+    </g>
+  );
+}
+
 export function RoachMascot({ blink = false, scale = 1, showGroundShadow = true, variant = "labStandard" }: RoachMascotProps) {
   return (
     <g transform={`scale(${scale})`}>
       {variant === "pickleReporter" ? (
         <PickleReporterMascot blink={blink} showGroundShadow={showGroundShadow} />
-      ) : (
+      ) : variant === "labStandard" ? (
         <ClassicRoachMascot blink={blink} showGroundShadow={showGroundShadow} />
+      ) : (
+        <LabVariantMascot blink={blink} showGroundShadow={showGroundShadow} skinId={variant} />
       )}
     </g>
   );
 }
 
 export function RoachShowcase({ className, skinId = "labStandard" }: { className?: string; skinId?: PlayerSkinId }) {
-  const scale = skinId === "pickleReporter" ? 1.16 : 1.64;
+  const scale =
+    skinId === "pickleReporter"
+      ? 1.16
+      : skinId === "terraChampion"
+        ? 1.36
+        : skinId === "roachGirl" || skinId === "cantonTwinTail"
+          ? 1.34
+          : skinId === "americanMantis"
+            ? 1.18
+            : skinId === "northernMini"
+              ? 1.82
+              : 1.5;
 
   return (
     <svg className={className} viewBox="0 0 280 340" aria-hidden="true">
