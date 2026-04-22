@@ -169,6 +169,96 @@ const ENEMY_VISUALS: Record<GroundEnemyType, EnemyVisual> = {
     headFill: "#424854",
     stripeFill: "#d7dbe1",
   },
+  spitter: {
+    bodyFill: "#8fb55a",
+    shellFill: "#5a7a32",
+    eyeFill: "#f4ffb6",
+    stroke: "#3e5722",
+    strokeWidth: 4.2,
+    legReach: 1.76,
+    legDrop: 1.04,
+    bodyWidth: 1.02,
+    bodyHeight: 0.82,
+    shellWidth: 0.96,
+    shellHeight: 0.76,
+    headFill: "#24341a",
+    stripeFill: "#c2e060",
+  },
+  hunter: {
+    bodyFill: "#a576b8",
+    shellFill: "#6e3f86",
+    eyeFill: "#f7d9ff",
+    stroke: "#452759",
+    strokeWidth: 4,
+    legReach: 2,
+    legDrop: 0.94,
+    bodyWidth: 0.94,
+    bodyHeight: 0.7,
+    shellWidth: 0.88,
+    shellHeight: 0.64,
+    headFill: "#2a1636",
+    stripeFill: "#d79ef2",
+  },
+  artillery: {
+    bodyFill: "#8d2e3c",
+    shellFill: "#511622",
+    eyeFill: "#ffcbb0",
+    stroke: "#2a0d14",
+    strokeWidth: 7,
+    legReach: 1.68,
+    legDrop: 1.24,
+    bodyWidth: 1.22,
+    bodyHeight: 0.94,
+    shellWidth: 1.14,
+    shellHeight: 0.88,
+    headFill: "#170709",
+    stripeFill: "#ff7a5c",
+  },
+  splitter: {
+    bodyFill: "#9cab52",
+    shellFill: "#5f6f2e",
+    eyeFill: "#f7ffba",
+    stroke: "#3c481f",
+    strokeWidth: 5.2,
+    legReach: 1.88,
+    legDrop: 1.08,
+    bodyWidth: 1.04,
+    bodyHeight: 0.82,
+    shellWidth: 0.98,
+    shellHeight: 0.74,
+    headFill: "#253017",
+    stripeFill: "#d6ee72",
+  },
+  shade: {
+    bodyFill: "#75869c",
+    shellFill: "#374458",
+    eyeFill: "#e5f0ff",
+    stroke: "#232b3a",
+    strokeWidth: 3.7,
+    legReach: 2.26,
+    legDrop: 0.84,
+    bodyWidth: 0.88,
+    bodyHeight: 0.62,
+    shellWidth: 0.82,
+    shellHeight: 0.56,
+    headFill: "#1d2431",
+    stripeFill: "#b9cfff",
+  },
+  sludge: {
+    bodyFill: "#6f9140",
+    shellFill: "#405821",
+    eyeFill: "#efffb1",
+    stroke: "#293719",
+    strokeWidth: 5.8,
+    legReach: 1.64,
+    legDrop: 1.16,
+    bodyWidth: 1.1,
+    bodyHeight: 0.88,
+    shellWidth: 1,
+    shellHeight: 0.78,
+    headFill: "#1e2a14",
+    stripeFill: "#9fe65b",
+  },
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -208,9 +298,13 @@ function renderBoss(enemy: EnemyEntity, hpRatio: number, transform: string) {
   }
 
   if (bossWave === 3) {
+    const phase = enemy.bossPhase ?? 1;
+    const auraFill = phase >= 3 ? "rgba(255, 64, 93, 0.18)" : phase >= 2 ? "rgba(255, 178, 92, 0.14)" : "rgba(0, 0, 0, 0)";
+
     return (
       <g transform={transform}>
         <ellipse cx="0" cy="28" rx="138" ry="50" fill="rgba(0, 0, 0, 0.28)" />
+        {phase >= 2 ? <ellipse cx="4" cy="16" rx={phase >= 3 ? 164 : 142} ry={phase >= 3 ? 88 : 76} fill={auraFill} /> : null}
         <g stroke="#291019" strokeWidth="11" strokeLinecap="round">
           <path d="M -76 6 L -168 -56" />
           <path d="M -92 34 L -186 8" />
@@ -225,7 +319,7 @@ function renderBoss(enemy: EnemyEntity, hpRatio: number, transform: string) {
         <ellipse cx="24" cy="22" rx="18" ry="24" fill="#d96a52" opacity="0.8" />
         <ellipse cx="58" cy="18" rx="15" ry="21" fill="#d96a52" opacity="0.72" />
         <ellipse cx="4" cy="20" rx="14" ry="19" fill="#d96a52" opacity="0.76" />
-        <path d="M -16 -26 C 28 -46, 68 -42, 108 -10" stroke="#c54c58" strokeWidth="10" fill="none" />
+        <path d="M -16 -26 C 28 -46, 68 -42, 108 -10" stroke={phase >= 3 ? "#ff6f78" : "#c54c58"} strokeWidth="10" fill="none" />
         <path d="M -10 42 C 24 58, 56 64, 96 52" stroke="#742537" strokeWidth="8" fill="none" opacity="0.85" />
         <circle cx="-82" cy="-10" r="12" fill="#ffeab8" />
         <circle cx="-82" cy="-10" r="4.5" fill="#33160d" />
@@ -261,6 +355,28 @@ function renderBoss(enemy: EnemyEntity, hpRatio: number, transform: string) {
   );
 }
 
+function StatusOverlay({ enemy }: { enemy: EnemyEntity }) {
+  const hasSlow = enemy.statusEffects.some((fx) => fx.type === "slow");
+  const hasPoison = enemy.statusEffects.some((fx) => fx.type === "poison");
+
+  if (!hasSlow && !hasPoison) {
+    return null;
+  }
+
+  const r = enemy.radius;
+
+  return (
+    <g>
+      {hasSlow ? (
+        <ellipse cx="0" cy="0" rx={toFixed(r * 1.1)} ry={toFixed(r * 0.85)} fill="none" stroke="rgba(120, 200, 255, 0.6)" strokeWidth="3" strokeDasharray="6 4" />
+      ) : null}
+      {hasPoison ? (
+        <ellipse cx="0" cy="0" rx={toFixed(r * 0.9)} ry={toFixed(r * 0.68)} fill="rgba(80, 220, 60, 0.12)" stroke="rgba(80, 220, 60, 0.5)" strokeWidth="2" />
+      ) : null}
+    </g>
+  );
+}
+
 export default function EnemySprite({ enemy }: { enemy: EnemyEntity }) {
   const angle = (Math.atan2(enemy.vy, enemy.vx) * 180) / Math.PI;
   const pulseScale = 1 + Math.sin(enemy.pulse || 0) * 0.04;
@@ -273,9 +389,11 @@ export default function EnemySprite({ enemy }: { enemy: EnemyEntity }) {
 
   const style = ENEMY_VISUALS[enemy.type];
   const shellStripeWidth = enemy.radius * style.shellWidth * 1.4;
+  const isStealthed = enemy.type === "shade" && enemy.specialState === "stealth";
 
   return (
-    <g transform={transform}>
+    <g transform={transform} opacity={isStealthed ? 0.48 : 1}>
+      {isStealthed ? <circle r={toFixed(enemy.radius * 1.7)} fill="rgba(185, 207, 255, 0.12)" stroke="rgba(185, 207, 255, 0.42)" strokeWidth="2" strokeDasharray="8 6" /> : null}
       <ellipse cx="0" cy={toFixed(enemy.radius * 0.72)} rx={toFixed(enemy.radius * 1.22)} ry={toFixed(enemy.radius * 0.46)} fill="rgba(0, 0, 0, 0.24)" />
       <g stroke={style.stroke} strokeWidth={style.strokeWidth} strokeLinecap="round">
         <path d={`M -${enemy.radius} 4 L -${enemy.radius * style.legReach} -${enemy.radius * 0.9}`} />
@@ -291,6 +409,7 @@ export default function EnemySprite({ enemy }: { enemy: EnemyEntity }) {
       <ellipse cx={-toFixed(enemy.radius * 0.7)} cy={-toFixed(enemy.radius * 0.16)} rx={toFixed(enemy.radius * 0.38)} ry={toFixed(enemy.radius * 0.3)} fill={style.headFill} />
       <circle cx={-toFixed(enemy.radius * 0.74)} cy={-toFixed(enemy.radius * 0.24)} r={toFixed(Math.max(3, enemy.radius * 0.14))} fill={style.eyeFill} />
       <circle cx={-toFixed(enemy.radius * 0.74)} cy={-toFixed(enemy.radius * 0.24)} r={toFixed(Math.max(1.8, enemy.radius * 0.06))} fill="#23140f" />
+      <StatusOverlay enemy={enemy} />
     </g>
   );
 }

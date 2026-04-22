@@ -1,4 +1,4 @@
-export type RunState = "running" | "paused" | "levelup" | "won" | "lost";
+export type RunState = "running" | "paused" | "levelup" | "relicChoice" | "won" | "lost";
 export type DifficultyId = "easy" | "normal" | "hard";
 export type EnemyTypeId =
   | "nymph"
@@ -11,13 +11,19 @@ export type EnemyTypeId =
   | "carrier"
   | "behemoth"
   | "phantom"
+  | "spitter"
+  | "hunter"
+  | "artillery"
+  | "splitter"
+  | "shade"
+  | "sludge"
   | "boss";
 export type BossRole = "wave" | "summon";
 export type BossActionState = "chase" | "teleport-windup" | "teleport-recover" | "dash-windup" | "dash-active";
 export type DecorationType = "puddle" | "crumb" | "cap" | "drain" | "stain";
 export type ObstacleType = "pipe" | "barrel" | "trash";
 export type PickupType = "xp" | "goldEgg";
-export type ProjectileVariant = "manual" | "auto";
+export type ProjectileVariant = "manual" | "auto" | "enemyRanged";
 export type MetaUpgradeId =
   | "baseDamage"
   | "baseMoveSpeed"
@@ -27,19 +33,85 @@ export type MetaUpgradeId =
   | "basePickupRadius"
   | "contactArmor"
   | "levelUpHeal";
+export type AchievementTierId = "northernMini" | "americanMantis" | "cantonTwinTail" | "terraFormars";
+export type AchievementId =
+  | "firstMolting"
+  | "hundredKills"
+  | "firstClear"
+  | "eggPocket"
+  | "normalClear"
+  | "twoBosses"
+  | "relicCollector"
+  | "mutationStack"
+  | "hardClear"
+  | "hardCollector"
+  | "lowDamageHard"
+  | "bossHunter"
+  | "hardFlawless"
+  | "hardStillness"
+  | "hardNoMeta"
+  | "hardOverkill";
+export type AchievementUnlocks = Partial<Record<AchievementId, boolean>>;
+export type PlayerSkinId =
+  | "labStandard"
+  | "pickleReporter"
+  | "roachGirl"
+  | "sewerKnight"
+  | "neonScout"
+  | "northernMini"
+  | "americanMantis"
+  | "cantonTwinTail"
+  | "terraChampion";
 export type GameEventType =
   | "playerShot"
   | "enemyDie"
+  | "enemyDieHit"
+  | "enemyDieExplode"
+  | "enemyDieShock"
   | "goldEggGain"
   | "playerHurt"
   | "xpGain"
   | "levelUp"
   | "buffReroll"
+  | "bossSpawn"
+  | "bossDie"
   | "bossSkillCharge"
   | "bossSkillCast"
   | "bossSummon"
   | "lightningStrike"
-  | "playerDefeat";
+  | "playerDefeat"
+  | "statusApplied"
+  | "relicGained";
+
+export type StatusEffectType = "slow" | "poison";
+
+export interface StatusEffect {
+  type: StatusEffectType;
+  remaining: number;
+  magnitude: number;
+  tickTimer?: number;
+}
+export type RelicId =
+  | "ricochet"
+  | "critGland"
+  | "chainSpore"
+  | "frenzyGland"
+  | "bloodthirst"
+  | "thickSkin"
+  | "stressDodge"
+  | "magnetTendril"
+  | "speedPheromone"
+  | "doubleHatch"
+  | "glassCannon"
+  | "deathRage";
+
+export interface RelicChoice {
+  id: RelicId;
+  name: string;
+  description: string;
+  category: string;
+}
+
 export type UpgradeId =
   | "damage"
   | "attackSpeed"
@@ -50,7 +122,9 @@ export type UpgradeId =
   | "autoTurret"
   | "orbitals"
   | "lightningStrike"
-  | "burstShell";
+  | "burstShell"
+  | "frostEgg"
+  | "corrosiveGland";
 
 export interface InputState {
   up: boolean;
@@ -58,6 +132,7 @@ export interface InputState {
   left: boolean;
   right: boolean;
   aimActive: boolean;
+  autoAim: boolean;
   pointerScreenX: number;
   pointerScreenY: number;
 }
@@ -87,6 +162,10 @@ export interface PlayerStats {
   lightningTargetRange: number;
   explosionRadius: number;
   explosionDamageRatio: number;
+  slowAmount: number;
+  slowDuration: number;
+  poisonDps: number;
+  poisonDuration: number;
 }
 
 export interface EntityBase {
@@ -111,7 +190,20 @@ export interface PlayerEntity extends EntityBase {
   lightningTimer: number;
   facingAngle: number;
   aimAngle: number;
+  speedBuffTimer: number;
   stats: PlayerStats;
+}
+
+export interface RangedEnemyConfig {
+  damage: number;
+  cooldown: number;
+  range: number;
+  stopDistance: number;
+  projectileSpeed: number;
+  projectileLife: number;
+  projectileRadius: number;
+  projectileTint: string;
+  moveWhileFiring?: boolean;
 }
 
 export interface EnemyEntity extends EntityBase {
@@ -137,6 +229,13 @@ export interface EnemyEntity extends EntityBase {
   summonTimer?: number;
   summonBurst?: number;
   summonPool?: EnemyTypeId[];
+  rangedTimer?: number;
+  specialTimer?: number;
+  trailTimer?: number;
+  specialState?: "stealth" | "normal";
+  splitDepth?: number;
+  bossPhase?: number;
+  statusEffects: StatusEffect[];
 }
 
 export interface ProjectileEntity {
@@ -181,7 +280,7 @@ export interface PickupEntity {
 
 export interface EffectEntity {
   id: string;
-  type: "burst" | "lightning";
+  type: "burst" | "lightning" | "splatter" | "blood-pool" | "acid-pool";
   x: number;
   y: number;
   radius: number;
@@ -189,6 +288,8 @@ export interface EffectEntity {
   alive: boolean;
   age: number;
   duration: number;
+  angle?: number;
+  seed?: number;
 }
 
 export interface Decoration {
@@ -252,6 +353,9 @@ export interface MetaUpgradeLevels {
 export interface MetaProfile {
   goldenEggs: number;
   metaUpgrades: MetaUpgradeLevels;
+  achievements: AchievementUnlocks;
+  unlockedSkinIds: PlayerSkinId[];
+  selectedSkinId: PlayerSkinId;
 }
 
 export interface GameEvent {
@@ -264,6 +368,7 @@ export interface RunSetup {
   difficultyId: DifficultyId;
   enabledUpgrades: UpgradeId[];
   metaUpgrades: MetaUpgradeLevels;
+  selectedSkinId: PlayerSkinId;
 }
 
 export interface EnemyTypeDefinition {
@@ -275,6 +380,8 @@ export interface EnemyTypeDefinition {
   damage: number;
   xp: number;
   tint: string;
+  bloodTint: string;
+  ranged?: RangedEnemyConfig;
 }
 
 export interface GameState {
@@ -323,8 +430,18 @@ export interface GameState {
   nextOrbitalId: number;
   nextPickupId: number;
   nextEffectId: number;
+  sessionStats: SessionStats;
+  relics: RelicId[];
+  relicChoices: RelicChoice[];
 }
 
 export interface SessionStats {
   kills: number;
+  damageDealt: number;
+  damageTaken: number;
+  projectilesFired: number;
+  bossesDefeated: number;
+  peakLevel: number;
+  usedMovementKeys: boolean;
+  usedCheat: boolean;
 }

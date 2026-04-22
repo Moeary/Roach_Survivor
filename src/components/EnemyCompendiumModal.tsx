@@ -40,6 +40,10 @@ function formatValue(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
 function createPreviewEnemy(
   type: EnemyTypeId,
   options?: {
@@ -87,6 +91,7 @@ function createPreviewEnemy(
     summonTimer: undefined,
     summonBurst: undefined,
     summonPool: undefined,
+    statusEffects: [],
   };
 }
 
@@ -180,20 +185,27 @@ function getBossDescription(bossWave: number, config: BossWaveConfig): string {
 
 function EnemyPreview({ enemy }: { enemy: EnemyEntity }) {
   const isBoss = enemy.type === "boss";
-  const width = isBoss ? 320 : 240;
-  const height = isBoss ? 220 : 170;
+  const width = isBoss ? 340 : 260;
+  const height = isBoss ? 232 : 190;
+  const previewEnemy = {
+    ...enemy,
+    x: 0,
+    y: 0,
+  };
+  const previewScale = isBoss
+    ? enemy.bossWave === 3
+      ? 0.76
+      : enemy.bossWave === 2
+        ? 0.82
+        : 0.9
+    : clamp(28 / enemy.radius, 0.86, 1.34);
+  const centerY = isBoss ? 136 : 108;
 
   return (
     <svg className="compendium-preview-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${enemy.name} 预览`}>
-      <defs>
-        <radialGradient id={`compendium-glow-${enemy.id}`} cx="50%" cy="40%" r="68%">
-          <stop offset="0%" stopColor={isBoss ? "rgba(255, 125, 102, 0.22)" : "rgba(214, 239, 109, 0.18)"} />
-          <stop offset="100%" stopColor="rgba(255, 255, 255, 0)" />
-        </radialGradient>
-      </defs>
-      <rect x="18" y="14" width={width - 36} height={height - 28} rx="26" fill="rgba(255, 255, 255, 0.02)" />
-      <ellipse cx={width / 2} cy={height * 0.45} rx={isBoss ? 118 : 88} ry={isBoss ? 72 : 54} fill={`url(#compendium-glow-${enemy.id})`} />
-      <EnemySprite enemy={enemy} />
+      <g transform={`translate(${width / 2} ${centerY}) scale(${previewScale})`}>
+        <EnemySprite enemy={previewEnemy} />
+      </g>
     </svg>
   );
 }
@@ -290,7 +302,9 @@ export default function EnemyCompendiumModal({ isOpen, onClose }: EnemyCompendiu
 
             return (
               <article key={entry.id} className={`compendium-card ${entry.kind === "boss" ? "compendium-card-boss" : ""}`}>
-                <EnemyPreview enemy={entry.preview} />
+                <div className={`compendium-preview-shell ${entry.kind === "boss" ? "compendium-preview-shell-boss" : ""}`}>
+                  <EnemyPreview enemy={entry.preview} />
+                </div>
                 <div className="compendium-card-head">
                   <div>
                     <span>{entry.stageLabel}</span>

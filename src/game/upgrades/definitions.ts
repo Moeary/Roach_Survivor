@@ -49,9 +49,9 @@ export const UPGRADE_DEFS: UpgradeDefinition[] = [
     id: "moveSpeed",
     name: "惊吓疾跑",
     shortName: "移速",
-    description: "移动速度提升 25%，走位和转场都会更轻松。",
+    description: "每级移动速度提升 10%，走位和转场都会更轻松。",
     apply(state) {
-      state.player.stats.moveSpeed *= 1.25;
+      state.player.stats.moveSpeed *= 1.1;
     },
   },
   {
@@ -119,6 +119,38 @@ export const UPGRADE_DEFS: UpgradeDefinition[] = [
 
       state.player.stats.explosionRadius += 16;
       state.player.stats.explosionDamageRatio = Math.min(1.25, state.player.stats.explosionDamageRatio + 0.12);
+    },
+  },
+  {
+    id: "frostEgg",
+    name: "寒霜卵液",
+    shortName: "冰缓",
+    description: "卵鞘命中后使敌人减速 30%，持续 2 秒。后续每级额外 +5% 减速、+0.5 秒持续。",
+    apply(state, currentRank) {
+      if (currentRank === 0) {
+        state.player.stats.slowAmount = 0.3;
+        state.player.stats.slowDuration = 2;
+        return;
+      }
+
+      state.player.stats.slowAmount = Math.min(0.7, state.player.stats.slowAmount + 0.05);
+      state.player.stats.slowDuration += 0.5;
+    },
+  },
+  {
+    id: "corrosiveGland",
+    name: "腐蚀腺液",
+    shortName: "腐蚀",
+    description: "卵鞘命中后附加腐蚀效果，每秒造成 4 点持续伤害，持续 3 秒。后续每级 +2 DPS、+0.5 秒。",
+    apply(state, currentRank) {
+      if (currentRank === 0) {
+        state.player.stats.poisonDps = 4;
+        state.player.stats.poisonDuration = 3;
+        return;
+      }
+
+      state.player.stats.poisonDps += 2;
+      state.player.stats.poisonDuration += 0.5;
     },
   },
 ];

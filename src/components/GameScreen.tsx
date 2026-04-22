@@ -1,5 +1,6 @@
 ﻿import { useEffect, useRef, useState } from "react";
 import {
+  chooseRelic,
   chooseUpgrade,
   createGameState,
   createInputState,
@@ -7,17 +8,18 @@ import {
   formatTime,
   getBoss,
   getCamera,
-  getPhaseLabel,
-  getStatusLabel,
   refreshUpgradeChoices,
   resetInputState,
   togglePause,
   updateGame,
 } from "../game/core";
+import { RELIC_DEFS } from "../game/relics";
 import { getBossWaveTime } from "../game/stages";
+import { buildAchievementRunResult, type AchievementRunResult } from "../game/achievements";
 import { GameAudioController, getBgmTrackForState, type AudioSettings } from "../audio/gameAudio";
 import { summarizeUpgrades } from "../game/upgrades";
 import type { EnemyEntity, GameState, InputState, RunSetup } from "../game/types";
+import { RelicIcon, UpgradeIcon } from "./GameIcon";
 import EnemySprite from "./sprites/enemies/EnemySprite";
 import PlayerSprite from "./sprites/player/PlayerSprite";
 import EffectSprite from "./sprites/world/EffectSprite";
@@ -31,6 +33,7 @@ import WorldDefs from "./sprites/world/WorldDefs";
 interface GameScreenProps {
   audioSettings: AudioSettings;
   onAwardGoldenEggs: (amount: number) => void;
+  onCompleteRun: (result: AchievementRunResult) => void;
   onReturnToMenu: () => void;
   setup: RunSetup;
 }
@@ -94,17 +97,15 @@ function BossTelegraphs({ enemies, state }: { enemies: EnemyEntity[]; state: Gam
         }
 
         if (enemy.bossAction === "dash-windup" && enemy.bossTargetX !== undefined && enemy.bossTargetY !== undefined) {
-          const deltaX = enemy.bossTargetX - enemy.x;
-          const deltaY = enemy.bossTargetY - enemy.y;
-          const length = Math.hypot(deltaX, deltaY);
-          const angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
+          const preview = getBossDashTelegraph(enemy, state);
+          const angle = (Math.atan2(preview.deltaY, preview.deltaX) * 180) / Math.PI;
           const width = enemy.radius + state.player.radius * 0.66;
 
           return (
             <g key={`${enemy.id}-dash-warning`} transform={`translate(${toFixed(enemy.x)} ${toFixed(enemy.y)}) rotate(${toFixed(angle)})`}>
-              <path d={`M 0 0 L ${toFixed(length)} 0`} stroke="rgba(255, 122, 68, 0.14)" strokeWidth={toFixed(width * 1.8)} strokeLinecap="round" />
-              <path d={`M 0 0 L ${toFixed(length)} 0`} stroke="rgba(255, 181, 126, 0.92)" strokeWidth="6" strokeDasharray="18 12" strokeLinecap="round" />
-              <circle cx={toFixed(length)} cy="0" r="18" fill="rgba(255, 178, 112, 0.12)" />
+              <path d={`M 0 0 L ${toFixed(preview.length)} 0`} stroke="rgba(255, 122, 68, 0.14)" strokeWidth={toFixed(width * 1.8)} strokeLinecap="round" />
+              <path d={`M 0 0 L ${toFixed(preview.length)} 0`} stroke="rgba(255, 181, 126, 0.92)" strokeWidth="6" strokeDasharray="18 12" strokeLinecap="round" />
+              <circle cx={toFixed(preview.length)} cy="0" r="18" fill="rgba(255, 178, 112, 0.12)" />
             </g>
           );
         }
@@ -115,13 +116,115 @@ function BossTelegraphs({ enemies, state }: { enemies: EnemyEntity[]; state: Gam
   );
 }
 
-export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnToMenu, setup }: GameScreenProps) {
+function getBossDashTelegraph(enemy: EnemyEntity, state: GameState): { deltaX: number; deltaY: number; length: number } {
+  const targetX = enemy.bossTargetX ?? state.player.x;
+  const targetY = enemy.bossTargetY ?? state.player.y;
+  const deltaX = targetX - enemy.x;
+  const deltaY = targetY - enemy.y;
+  const targetDistance = Math.hypot(deltaX, deltaY) || 1;
+  const overrunDistance = state.player.radius + enemy.radius * 1.35 + state.player.stats.moveSpeed * 0.9;
+  const length = Math.max(640, Math.min(1320, targetDistance + overrunDistance));
+
+  return {
+    deltaX,
+    deltaY,
+    length,
+  };
+}
+
+function BossOffscreenIndicator({ boss, camera, state }: { boss: EnemyEntity | null; camera: ReturnType<typeof getCamera>; state: GameState }) {
+  if (!boss) {
+    return null;
+  }
+
+  const width = state.viewport.width;
+  const height = state.viewport.height;
+  const screenX = boss.x - camera.x + width / 2;
+  const screenY = boss.y - camera.y + height / 2;
+  const edgePadding = 52;
+  const isInView = screenX >= boss.radius && screenX <= width - boss.radius && screenY >= boss.radius && screenY <= height - boss.radius;
+
+  if (isInView) {
+    return null;
+  }
+
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const deltaX = screenX - centerX;
+  const deltaY = screenY - centerY;
+  const ratioX = deltaX === 0 ? Number.POSITIVE_INFINITY : (width / 2 - edgePadding) / Math.abs(deltaX);
+  const ratioY = deltaY === 0 ? Number.POSITIVE_INFINITY : (height / 2 - edgePadding) / Math.abs(deltaY);
+  const ratio = Math.min(ratioX, ratioY);
+  const indicatorX = clamp(centerX + deltaX * ratio, edgePadding, width - edgePadding);
+  const indicatorY = clamp(centerY + deltaY * ratio, edgePadding, height - edgePadding);
+  const angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
+
+  return (
+    <g transform={`translate(${toFixed(indicatorX)} ${toFixed(indicatorY)})`}>
+      <circle r="34" fill="rgba(15, 18, 14, 0.78)" stroke="rgba(255, 184, 92, 0.7)" strokeWidth="2.5" />
+      <g transform={`rotate(${toFixed(angle)})`}>
+        <path d="M 25 0 L -10 -18 L -4 0 L -10 18 Z" fill="#ffcb6d" stroke="#2a160f" strokeWidth="2.2" strokeLinejoin="round" />
+      </g>
+      <text x="0" y="49" fill="#ffdb8e" fontSize="15" fontWeight="800" textAnchor="middle" letterSpacing="2">
+        BOSS
+      </text>
+    </g>
+  );
+}
+
+const MOVEMENT_KEY_CODES = ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+const HEART_COUNT = 10;
+const SKILL_HOTBAR_SLOTS = 8;
+const RELIC_HOTBAR_SLOTS = 5;
+
+function HealthHeart({ fill, index }: { fill: number; index: number }) {
+  const clipId = `heart-fill-${index}`;
+  const width = clamp(fill, 0, 1) * 64;
+
+  return (
+    <svg className="heart-icon" viewBox="0 0 64 64" aria-hidden="true">
+      <defs>
+        <clipPath id={clipId}>
+          <rect x="0" y="0" width={toFixed(width)} height="64" />
+        </clipPath>
+      </defs>
+      <path
+        className="heart-icon-empty"
+        d="M32 53 C17 42 10 34 10 23 C10 15 16 10 23 10 C27 10 30 12 32 16 C34 12 37 10 41 10 C48 10 54 15 54 23 C54 34 47 42 32 53 Z"
+      />
+      <path
+        className="heart-icon-fill"
+        clipPath={`url(#${clipId})`}
+        d="M32 53 C17 42 10 34 10 23 C10 15 16 10 23 10 C27 10 30 12 32 16 C34 12 37 10 41 10 C48 10 54 15 54 23 C54 34 47 42 32 53 Z"
+      />
+      <path
+        className="heart-icon-stroke"
+        d="M32 53 C17 42 10 34 10 23 C10 15 16 10 23 10 C27 10 30 12 32 16 C34 12 37 10 41 10 C48 10 54 15 54 23 C54 34 47 42 32 53 Z"
+      />
+    </svg>
+  );
+}
+
+function HealthHearts({ current, max }: { current: number; max: number }) {
+  return (
+    <div className="heart-row" aria-label={`生命值 ${Math.ceil(current)} / ${max}`}>
+      {Array.from({ length: HEART_COUNT }, (_, index) => {
+        const heartValue = (current / Math.max(1, max)) * HEART_COUNT - index;
+        return <HealthHeart key={index} fill={heartValue} index={index} />;
+      })}
+    </div>
+  );
+}
+
+export default function GameScreen({ audioSettings, onAwardGoldenEggs, onCompleteRun, onReturnToMenu, setup }: GameScreenProps) {
   const stateRef = useRef<GameState>(createGameState(setup));
   const inputRef = useRef<InputState>(createInputState());
   const frameRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number>(performance.now());
+  const completionReportedRef = useRef(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const awardGoldenEggsRef = useRef(onAwardGoldenEggs);
+  const completeRunRef = useRef(onCompleteRun);
   const audioRef = useRef<GameAudioController | null>(null);
   const [, forceRender] = useState(0);
 
@@ -136,6 +239,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
   function restartRun() {
     stateRef.current = createGameState(setup);
     resetInputState(inputRef.current);
+    completionReportedRef.current = false;
     lastFrameRef.current = performance.now();
     refresh();
   }
@@ -148,6 +252,22 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
     }
 
     const didChoose = chooseUpgrade(stateRef.current, choice.id);
+
+    if (didChoose) {
+      refresh();
+    }
+
+    return didChoose;
+  }
+
+  function chooseRelicByIndex(index: number) {
+    const choice = stateRef.current.relicChoices[index];
+
+    if (!choice) {
+      return false;
+    }
+
+    const didChoose = chooseRelic(stateRef.current, choice.id);
 
     if (didChoose) {
       refresh();
@@ -182,6 +302,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
 
     audioRef.current?.unlock();
     audioRef.current?.playCue("cheat");
+    state.sessionStats.usedCheat = true;
     state.timer = targetTime;
     refresh();
     return true;
@@ -208,6 +329,10 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
   }, [onAwardGoldenEggs]);
 
   useEffect(() => {
+    completeRunRef.current = onCompleteRun;
+  }, [onCompleteRun]);
+
+  useEffect(() => {
     audioRef.current?.setSettings(audioSettings);
   }, [audioSettings]);
 
@@ -229,13 +354,24 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
       const code = event.code;
       audioRef.current?.unlock();
 
-      if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(code)) {
+      if (MOVEMENT_KEY_CODES.includes(code)) {
         event.preventDefault();
+
+        if (!event.repeat && state.runState === "running") {
+          state.sessionStats.usedMovementKeys = true;
+        }
       }
 
       if (code === "Escape" && inputRef.current.aimActive) {
         event.preventDefault();
         inputRef.current.aimActive = false;
+        refresh();
+        return;
+      }
+
+      if (code === "KeyF" && !event.repeat) {
+        event.preventDefault();
+        inputRef.current.autoAim = !inputRef.current.autoAim;
         refresh();
         return;
       }
@@ -246,6 +382,12 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
           refresh();
         }
         return;
+      }
+
+      if (state.runState === "relicChoice" && !event.repeat) {
+        if (code === "Digit1") { event.preventDefault(); chooseRelicByIndex(0); return; }
+        if (code === "Digit2") { event.preventDefault(); chooseRelicByIndex(1); return; }
+        if (code === "Digit3") { event.preventDefault(); chooseRelicByIndex(2); return; }
       }
 
       if (state.runState === "levelup" && !event.repeat) {
@@ -291,6 +433,10 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
       resetInputState(inputRef.current);
     }
 
+    function handleContextMenu(event: MouseEvent) {
+      event.preventDefault();
+    }
+
     function frame(now: number) {
       const deltaSeconds = (now - lastFrameRef.current) / 1000;
       lastFrameRef.current = now;
@@ -305,6 +451,11 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
         }
       });
 
+      if (!completionReportedRef.current && (stateRef.current.runState === "won" || stateRef.current.runState === "lost")) {
+        completionReportedRef.current = true;
+        completeRunRef.current(buildAchievementRunResult(stateRef.current, setup));
+      }
+
       refresh();
       frameRef.current = window.requestAnimationFrame(frame);
     }
@@ -312,12 +463,14 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("blur", handleBlur);
+    window.addEventListener("contextmenu", handleContextMenu);
     frameRef.current = window.requestAnimationFrame(frame);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("contextmenu", handleContextMenu);
 
       if (frameRef.current !== null) {
         window.cancelAnimationFrame(frameRef.current);
@@ -334,14 +487,18 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
   const translateY = state.viewport.height / 2 - camera.y;
   const boss = getBoss(state);
   const summary = summarizeUpgrades(state);
-  const healthRatio = clamp(state.player.hp / state.player.maxHp, 0, 1);
   const xpRatio = clamp(state.xp / state.xpToNext, 0, 1);
+  const xpRemaining = Math.max(0, state.xpToNext - state.xp);
   const nextBossTime = getBossWaveTime(state.bossWavesSpawned + 1);
   const fastForwardTarget = Math.max(0, nextBossTime - 5);
   const canFastForward = state.runState === "running" && !state.bossSpawned && state.bossWavesSpawned < state.difficulty.bossWaves && state.timer < fastForwardTarget;
   const targetText = `存活 ${formatTime(state.runDuration)} 并击败 ${state.difficulty.bossWaves} 波 Boss`;
-  const difficultyText = `${state.difficulty.label} / ${state.difficulty.bossWaves} 波 Boss`;
   const bossTitle = boss ? `${boss.name} 第 ${boss.bossWave ?? state.bossWavesSpawned} 波` : "";
+  const relicInventory = state.relics
+    .map((relicId) => RELIC_DEFS.find((relic) => relic.id === relicId))
+    .filter((relic): relic is (typeof RELIC_DEFS)[number] => Boolean(relic));
+  const skillPlaceholderCount = Math.max(0, SKILL_HOTBAR_SLOTS - summary.length);
+  const relicPlaceholderCount = Math.max(0, RELIC_HOTBAR_SLOTS - relicInventory.length);
   const visibleDecorations = state.decorations.filter((decoration) => isVisible(decoration.x, decoration.y, 88, state, 340));
   const visibleObstacles = state.obstacles.filter((obstacle) => isVisible(obstacle.x, obstacle.y, obstacle.radius * 1.4, state, 340));
   const visiblePickups = state.pickups.filter((pickup) => isVisible(pickup.x, pickup.y, pickup.radius, state));
@@ -349,9 +506,11 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
   const visibleProjectiles = state.projectiles.filter((projectile) => isVisible(projectile.x, projectile.y, projectile.radius, state, 120));
   const visibleOrbitals = state.orbitals.filter((orbital) => isVisible(orbital.x, orbital.y, orbital.radius, state, 80));
   const visibleEffects = state.effects.filter((effect) => isVisible(effect.x, effect.y, effect.radius * 2, state, 160));
+  const groundEffects = visibleEffects.filter((effect) => effect.type === "blood-pool" || effect.type === "acid-pool");
+  const overlayEffects = visibleEffects.filter((effect) => effect.type !== "blood-pool" && effect.type !== "acid-pool");
 
   return (
-    <main className={`game-screen ${input.aimActive ? "game-screen-aiming" : ""}`}>
+    <main className={`game-screen ${input.aimActive ? "game-screen-aiming" : ""}`} onContextMenu={(event) => event.preventDefault()}>
       <svg
         ref={svgRef}
         className="game-svg"
@@ -366,6 +525,11 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
         }}
         onMouseMove={(event) => updatePointerPosition(event.clientX, event.clientY)}
         onMouseDown={(event) => {
+          if (event.button !== 0) {
+            event.preventDefault();
+            return;
+          }
+
           audioRef.current?.unlock();
           updatePointerPosition(event.clientX, event.clientY);
           refresh();
@@ -377,68 +541,42 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
           <g>
             <MapBackdrop camera={camera} decorations={visibleDecorations} map={state.map} />
           </g>
+          <g>{groundEffects.map((effect) => <EffectSprite key={effect.id} effect={effect} />)}</g>
           <g>{visibleObstacles.map((obstacle) => <ObstacleSprite key={obstacle.id} obstacle={obstacle} />)}</g>
           <g>{visiblePickups.map((pickup) => <PickupSprite key={pickup.id} pickup={pickup} />)}</g>
           <g><BossTelegraphs enemies={visibleEnemies} state={state} /></g>
           <g>{visibleEnemies.map((enemy) => <EnemySprite key={enemy.id} enemy={enemy} />)}</g>
           <g>{visibleProjectiles.map((projectile) => <ProjectileSprite key={projectile.id} projectile={projectile} />)}</g>
           <g>{visibleOrbitals.map((orbital) => <OrbitalSprite key={orbital.id} orbital={orbital} />)}</g>
-          <g><PlayerSprite player={state.player} /></g>
+          <g><PlayerSprite player={state.player} skinId={setup.selectedSkinId} /></g>
           <g><AimReticle state={state} input={input} /></g>
-          <g>{visibleEffects.map((effect) => <EffectSprite key={effect.id} effect={effect} />)}</g>
+          <g>{overlayEffects.map((effect) => <EffectSprite key={effect.id} effect={effect} />)}</g>
         </g>
+        <BossOffscreenIndicator boss={boss} camera={camera} state={state} />
       </svg>
 
-      {!input.aimActive && state.runState === "running" ? (
-        <div className="aim-hint">把鼠标移进战场接管瞄准，按 Esc 释放。</div>
+      {!input.aimActive && !input.autoAim && state.runState === "running" ? (
+        <div className="aim-hint">把鼠标移进战场接管瞄准，按 Esc 释放。按 F 切换自瞄。</div>
       ) : null}
 
       <div className="hud-top">
-        <div className="hud-cluster">
-          <div className="hud-pill">
-            <span>局势</span>
-            <strong>{getStatusLabel(state)}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>计时</span>
-            <strong>{formatTime(state.timer)}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>阶段</span>
-            <strong>{getPhaseLabel(state)}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>威胁</span>
-            <strong>{state.enemies.length}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>瞄准</span>
-            <strong>{input.aimActive ? "鼠标接管中" : "等待接管"}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>难度</span>
-            <strong>{difficultyText}</strong>
-          </div>
-          <div className="hud-pill">
-            <span>金色卵鞘</span>
-            <strong>{state.runGoldenEggsCollected}</strong>
-          </div>
-        </div>
-
-        <div className="hud-target">
+        <section className="hud-objective" aria-label="局内目标">
           <button
-            className="hud-target-trigger"
+            className="hud-objective-trigger"
             type="button"
             onClick={fastForwardToNextBossPrep}
             disabled={!canFastForward}
             title={canFastForward ? `作弊：快进到 ${formatTime(fastForwardTarget)}` : "当前不可快进"}
             aria-label={canFastForward ? `作弊：快进到 ${formatTime(fastForwardTarget)}` : "当前不可快进"}
           >
-            目标
+            局内目标
           </button>
           <strong>{targetText}</strong>
-          <em>Esc 释放瞄准 / P 暂停</em>
-        </div>
+          <div className="hud-objective-row">
+            <span>当前时间 <b>{formatTime(state.timer)}</b></span>
+            <span>还剩敌人 <b>{state.enemies.length}</b></span>
+          </div>
+        </section>
       </div>
 
       {boss ? (
@@ -456,47 +594,47 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
       ) : null}
 
       <div className="hud-bottom">
-        <section className="hud-stack hud-stack-left">
-          <div className="hud-card">
-            <div className="hud-card-head">
-              <span>生命值</span>
-              <strong>
-                {Math.ceil(state.player.hp)} / {state.player.maxHp}
-              </strong>
-            </div>
-            <div className="meter-shell">
-              <div className="meter-fill meter-fill-health" style={{ width: `${(healthRatio * 100).toFixed(1)}%` }} />
-            </div>
+        <section className="minecraft-hud" aria-label="战斗状态栏">
+          <div className="minecraft-health-row">
+            <HealthHearts current={state.player.hp} max={state.player.maxHp} />
+            <span>{Math.ceil(state.player.hp)} / {state.player.maxHp}</span>
           </div>
 
-          <div className="hud-card">
-            <div className="hud-card-head">
-              <span>经验值</span>
-              <strong>
-                {state.xp} / {state.xpToNext}
-              </strong>
-            </div>
-            <div className="meter-shell">
-              <div className="meter-fill meter-fill-xp" style={{ width: `${(xpRatio * 100).toFixed(1)}%` }} />
-            </div>
-          </div>
-        </section>
-
-        <section className="hud-card build-card">
-          <div className="hud-card-head">
-            <span>变异摘要</span>
+          <div className="minecraft-xp-row">
             <strong>Lv.{state.level}</strong>
+            <div className="minecraft-xp-track" aria-label={`经验值 ${state.xp} / ${state.xpToNext}`}>
+              <div className="minecraft-xp-fill" style={{ width: `${(xpRatio * 100).toFixed(1)}%` }} />
+            </div>
+            <span>还差 {xpRemaining} EXP</span>
           </div>
-          <div className="build-chip-row">
-            {summary.length ? (
-              summary.map((entry) => (
-                <span key={entry.id} className="build-chip">
-                  {entry.shortName} Lv.{entry.rank}
-                </span>
-              ))
-            ) : (
-              <span className="build-chip build-chip-muted">暂未变异</span>
-            )}
+
+          <div className="inventory-hotbar">
+            <div className="inventory-section inventory-section-skills" aria-label="技能栏">
+              {summary.map((entry) => (
+                <div key={entry.id} className="inventory-slot inventory-slot-filled" title={`${entry.name} Lv.${entry.rank}`}>
+                  <UpgradeIcon id={entry.id} className="inventory-icon" />
+                  <span className="inventory-slot-label">{entry.shortName}</span>
+                  <b className="inventory-slot-level">{entry.rank}</b>
+                </div>
+              ))}
+              {Array.from({ length: skillPlaceholderCount }, (_, index) => (
+                <div key={`skill-empty-${index}`} className="inventory-slot inventory-slot-empty" aria-hidden="true" />
+              ))}
+            </div>
+
+            <div className="inventory-divider" aria-hidden="true" />
+
+            <div className="inventory-section inventory-section-relics" aria-label="圣遗物栏">
+              {relicInventory.map((relic) => (
+                <div key={relic.id} className={`inventory-slot inventory-slot-filled inventory-slot-relic inventory-slot-relic-${relic.category}`} title={`${relic.name}：${relic.description}`}>
+                  <RelicIcon id={relic.id} className="inventory-icon" />
+                  <span className="inventory-slot-label">{relic.name}</span>
+                </div>
+              ))}
+              {Array.from({ length: relicPlaceholderCount }, (_, index) => (
+                <div key={`relic-empty-${index}`} className="inventory-slot inventory-slot-empty inventory-slot-empty-relic" aria-hidden="true" />
+              ))}
+            </div>
           </div>
         </section>
       </div>
@@ -518,12 +656,36 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
                 <div className="choice-grid">
                   {state.upgradeChoices.map((choice, index) => (
                     <button key={choice.id} className="choice-card" type="button" onClick={() => chooseUpgradeByIndex(index)}>
-                      <span className="choice-hotkey">{index + 1}</span>
+                      <div className="choice-card-top">
+                        <UpgradeIcon id={choice.id} className="choice-icon" />
+                        <span className="choice-hotkey">{index + 1}</span>
+                      </div>
                       <h3>{choice.name}</h3>
                       <p>{choice.description}</p>
                       <p className="overlay-copy">
                         当前等级 {choice.currentRank} -&gt; {choice.nextRank}
                       </p>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {state.runState === "relicChoice" ? (
+              <>
+                <p className="menu-eyebrow">RELIC</p>
+                <h2>发现了古老的遗物</h2>
+                <p className="overlay-copy">选择一件遗物，它将伴随你这一整局。</p>
+                <div className="choice-grid">
+                  {state.relicChoices.map((choice, index) => (
+                    <button key={choice.id} className="choice-card relic-card" type="button" onClick={() => chooseRelicByIndex(index)}>
+                      <div className="choice-card-top">
+                        <RelicIcon id={choice.id} className="choice-icon" />
+                        <span className="choice-hotkey">{index + 1}</span>
+                      </div>
+                      <span className={`relic-category relic-category-${choice.category}`}>{choice.category === "offensive" ? "进攻" : choice.category === "defensive" ? "防御" : choice.category === "utility" ? "功能" : "风险"}</span>
+                      <h3>{choice.name}</h3>
+                      <p>{choice.description}</p>
                     </button>
                   ))}
                 </div>
@@ -554,6 +716,18 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
                 <p className="menu-eyebrow">VICTORY</p>
                 <h2>整片母巢被你轰穿了</h2>
                 <p className="overlay-copy">你撑过了 {formatTime(state.runDuration)}，并清掉了 {state.difficulty.bossWaves} 波 Boss，整个污水区都被你打成了空壳。</p>
+                <div className="stats-grid">
+                  <div className="stats-item"><span>存活时间</span><strong>{formatTime(state.timer)}</strong></div>
+                  <div className="stats-item"><span>击杀总数</span><strong>{state.sessionStats.kills}</strong></div>
+                  <div className="stats-item"><span>Boss 击败</span><strong>{state.sessionStats.bossesDefeated}</strong></div>
+                  <div className="stats-item"><span>最高等级</span><strong>Lv.{state.sessionStats.peakLevel}</strong></div>
+                  <div className="stats-item"><span>造成伤害</span><strong>{Math.round(state.sessionStats.damageDealt).toLocaleString()}</strong></div>
+                  <div className="stats-item"><span>承受伤害</span><strong>{Math.round(state.sessionStats.damageTaken).toLocaleString()}</strong></div>
+                  <div className="stats-item"><span>弹丸发射</span><strong>{state.sessionStats.projectilesFired}</strong></div>
+                  <div className="stats-item"><span>金色卵鞘</span><strong>{state.runGoldenEggsCollected}</strong></div>
+                  <div className="stats-item"><span>移动键</span><strong>{state.sessionStats.usedMovementKeys ? "已使用" : "未使用"}</strong></div>
+                  <div className="stats-item"><span>快进测试</span><strong>{state.sessionStats.usedCheat ? "已使用" : "未使用"}</strong></div>
+                </div>
                 <div className="modal-actions">
                   <button className="button-primary" type="button" onClick={restartRun}>
                     再来一局
@@ -570,6 +744,18 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onReturnT
                 <p className="menu-eyebrow">DEFEAT</p>
                 <h2>你被虫潮啃穿了</h2>
                 <p className="overlay-copy">这次走位没顶住。下一局试试更早拿攻速、移速、自动副炮或者环绕弹。</p>
+                <div className="stats-grid">
+                  <div className="stats-item"><span>存活时间</span><strong>{formatTime(state.timer)}</strong></div>
+                  <div className="stats-item"><span>击杀总数</span><strong>{state.sessionStats.kills}</strong></div>
+                  <div className="stats-item"><span>Boss 击败</span><strong>{state.sessionStats.bossesDefeated}</strong></div>
+                  <div className="stats-item"><span>最高等级</span><strong>Lv.{state.sessionStats.peakLevel}</strong></div>
+                  <div className="stats-item"><span>造成伤害</span><strong>{Math.round(state.sessionStats.damageDealt).toLocaleString()}</strong></div>
+                  <div className="stats-item"><span>承受伤害</span><strong>{Math.round(state.sessionStats.damageTaken).toLocaleString()}</strong></div>
+                  <div className="stats-item"><span>弹丸发射</span><strong>{state.sessionStats.projectilesFired}</strong></div>
+                  <div className="stats-item"><span>金色卵鞘</span><strong>{state.runGoldenEggsCollected}</strong></div>
+                  <div className="stats-item"><span>移动键</span><strong>{state.sessionStats.usedMovementKeys ? "已使用" : "未使用"}</strong></div>
+                  <div className="stats-item"><span>快进测试</span><strong>{state.sessionStats.usedCheat ? "已使用" : "未使用"}</strong></div>
+                </div>
                 <div className="modal-actions">
                   <button className="button-primary" type="button" onClick={restartRun}>
                     重新孵化

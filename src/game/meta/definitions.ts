@@ -1,4 +1,5 @@
-import type { MetaProfile, MetaUpgradeId, MetaUpgradeLevels } from "../types";
+import { hasUnlockedAllAchievements, isAchievementTierComplete, mergeAchievementUnlocks, normalizeAchievementUnlocks } from "../achievements";
+import type { AchievementId, AchievementUnlocks, MetaProfile, MetaUpgradeId, MetaUpgradeLevels, PlayerSkinId } from "../types";
 
 export interface MetaUpgradeDefinition {
   id: MetaUpgradeId;
@@ -13,8 +14,20 @@ export interface MetaUpgradeDefinition {
   costs?: number[];
 }
 
+export interface PlayerSkinDefinition {
+  id: PlayerSkinId;
+  name: string;
+  shortName: string;
+  description: string;
+  flavor: string;
+  cost: number;
+  unlockType?: "default" | "purchase" | "achievement";
+  rewardDescription?: string;
+}
+
 export const BASE_LEVEL_UP_HEAL = 20;
 export const AUTO_REGEN_INTERVAL_SECONDS = 3;
+export const DEFAULT_PLAYER_SKIN_ID: PlayerSkinId = "labStandard";
 
 export const EMPTY_META_UPGRADES: MetaUpgradeLevels = {
   baseDamage: 0,
@@ -27,9 +40,100 @@ export const EMPTY_META_UPGRADES: MetaUpgradeLevels = {
   levelUpHeal: 0,
 };
 
+export const PLAYER_SKIN_DEFS: PlayerSkinDefinition[] = [
+  {
+    id: "labStandard",
+    name: "实验室基础体",
+    shortName: "基础体",
+    description: "默认蟑螂皮肤，圆脸、硬壳、看起来像刚从培养皿里爬出来的吉祥物。",
+    flavor: "广东人的神必实验室最稳定的一号样本。",
+    cost: 0,
+    unlockType: "default",
+  },
+  {
+    id: "pickleReporter",
+    name: "迪克○桑切斯",
+    shortName: "迪克",
+    description: "受到神秘启发改造的腌黄瓜，装配着下水道老鼠断肢和刀片改造成的义体，非常致命。",
+    flavor: "别问为什么，我是一根能徒手灭整个老鼠黑帮的黄瓜！",
+    cost: 128,
+    unlockType: "purchase",
+  },
+  {
+    id: "roachGirl",
+    name: "蟑螂娘",
+    shortName: "蟑螂娘",
+    description: "拥有迷人长发的拟人外观，可爱的外表下是下水道里最能打的。",
+    flavor: "把蟑螂拟人化真的没问题吗？",
+    cost: 188,
+    unlockType: "purchase",
+  },
+  {
+    id: "sewerKnight",
+    name: "下水道罐甲骑士",
+    shortName: "罐甲",
+    description: "用易拉罐和旧管线拼出来的重甲皮肤，移动时像金属标本在散步。",
+    flavor: "护甲没有数值加成，但心理防御非常高。",
+    cost: 88,
+    unlockType: "purchase",
+  },
+  {
+    id: "neonScout",
+    name: "霓虹触须斥候",
+    shortName: "霓虹",
+    description: "发光触须和荧光背甲，适合在高压虫潮里把自己变成移动路标。",
+    flavor: "怕黑，所以决定比黑暗更亮。",
+    cost: 118,
+    unlockType: "purchase",
+  },
+  {
+    id: "northernMini",
+    name: "北方迷你蟑螂",
+    shortName: "迷你",
+    description: "完成北方迷你蟑螂档案后解锁，小小一只但走位非常倔。",
+    flavor: "小不是缺点，是碰撞盒美学。",
+    cost: 0,
+    unlockType: "achievement",
+    rewardDescription: "完成北方迷你蟑螂档案",
+  },
+  {
+    id: "americanMantis",
+    name: "美洲大镰",
+    shortName: "大镰",
+    description: "完成美洲大镰档案后解锁，镰足夸张、冲阵感更强。",
+    flavor: "负责把普通难度切成两半。",
+    cost: 0,
+    unlockType: "achievement",
+    rewardDescription: "完成美洲大镰档案",
+  },
+  {
+    id: "cantonTwinTail",
+    name: "广州双马尾",
+    shortName: "双马尾",
+    description: "完成所有档案后即将解锁的高级形态，拥有六手肌肉重甲的恐怖怪物。",
+    flavor: "神必实验室出品的最硬核样本，甚至还会双臂抱胸装酷。",
+    cost: 0,
+    unlockType: "achievement",
+    rewardDescription: "完成广州双马尾档案",
+  },
+  {
+    id: "terraChampion",
+    name: "火星异种",
+    shortName: "火星体",
+    description: "全黑肌肉型最终猛男皮肤，完成所有成就后自动解锁。",
+    flavor: "“じょう”——只要听到这句，所有神怪都会发抖。",
+    cost: 0,
+    unlockType: "achievement",
+    rewardDescription: "完成所有成就",
+  },
+];
+
 export const DEFAULT_META_PROFILE: MetaProfile = {
   goldenEggs: 0,
   metaUpgrades: { ...EMPTY_META_UPGRADES },
+  achievements: {},
+  unlockedSkinIds: [DEFAULT_PLAYER_SKIN_ID],
+  selectedSkinId: DEFAULT_PLAYER_SKIN_ID,
 };
 
 export const META_UPGRADE_DEFS: MetaUpgradeDefinition[] = [
@@ -119,9 +223,53 @@ export const META_UPGRADE_DEFS: MetaUpgradeDefinition[] = [
 ];
 
 const META_UPGRADE_MAP = new Map<MetaUpgradeId, MetaUpgradeDefinition>(META_UPGRADE_DEFS.map((upgrade) => [upgrade.id, upgrade]));
+const PLAYER_SKIN_MAP = new Map<PlayerSkinId, PlayerSkinDefinition>(PLAYER_SKIN_DEFS.map((skin) => [skin.id, skin]));
+const PLAYER_SKIN_ID_SET = new Set<PlayerSkinId>(PLAYER_SKIN_DEFS.map((skin) => skin.id));
 
 function clampLevel(level: number | undefined): number {
   return Math.max(0, Math.floor(level ?? 0));
+}
+
+function isPlayerSkinId(value: unknown): value is PlayerSkinId {
+  return typeof value === "string" && PLAYER_SKIN_ID_SET.has(value as PlayerSkinId);
+}
+
+export function getAchievementRewardSkinIds(achievements?: AchievementUnlocks): PlayerSkinId[] {
+  const rewardSkinIds: PlayerSkinId[] = [];
+
+  if (isAchievementTierComplete(achievements, "northernMini")) {
+    rewardSkinIds.push("northernMini");
+  }
+
+  if (isAchievementTierComplete(achievements, "americanMantis")) {
+    rewardSkinIds.push("americanMantis");
+  }
+
+  if (isAchievementTierComplete(achievements, "cantonTwinTail")) {
+    rewardSkinIds.push("cantonTwinTail");
+  }
+
+  if (hasUnlockedAllAchievements(achievements)) {
+    rewardSkinIds.push("terraChampion");
+  }
+
+  return rewardSkinIds;
+}
+
+function normalizeUnlockedSkinIds(skinIds?: PlayerSkinId[], achievements?: AchievementUnlocks): PlayerSkinId[] {
+  const ownedSkinIds = new Set<PlayerSkinId>([DEFAULT_PLAYER_SKIN_ID]);
+
+  skinIds?.forEach((skinId) => {
+    if (isPlayerSkinId(skinId)) {
+      ownedSkinIds.add(skinId);
+    }
+  });
+
+  getAchievementRewardSkinIds(achievements).forEach((skinId) => {
+    ownedSkinIds.add(skinId);
+  });
+
+  return PLAYER_SKIN_DEFS.map((skin) => skin.id).filter((skinId) => ownedSkinIds.has(skinId));
 }
 
 export function normalizeMetaUpgrades(metaUpgrades?: Partial<MetaUpgradeLevels>): MetaUpgradeLevels {
@@ -138,10 +286,25 @@ export function normalizeMetaUpgrades(metaUpgrades?: Partial<MetaUpgradeLevels>)
 }
 
 export function normalizeMetaProfile(profile?: Partial<MetaProfile>): MetaProfile {
+  const achievements = normalizeAchievementUnlocks(profile?.achievements);
+  const unlockedSkinIds = normalizeUnlockedSkinIds(profile?.unlockedSkinIds, achievements);
+  const selectedSkinId = isPlayerSkinId(profile?.selectedSkinId) ? profile.selectedSkinId : DEFAULT_PLAYER_SKIN_ID;
+
   return {
     goldenEggs: Math.max(0, Math.floor(profile?.goldenEggs ?? 0)),
     metaUpgrades: normalizeMetaUpgrades(profile?.metaUpgrades),
+    achievements,
+    unlockedSkinIds,
+    selectedSkinId: unlockedSkinIds.includes(selectedSkinId) ? selectedSkinId : DEFAULT_PLAYER_SKIN_ID,
   };
+}
+
+export function getPlayerSkinDefinition(skinId: PlayerSkinId): PlayerSkinDefinition {
+  return PLAYER_SKIN_MAP.get(skinId) ?? PLAYER_SKIN_MAP.get(DEFAULT_PLAYER_SKIN_ID)!;
+}
+
+export function isPlayerSkinOwned(profile: MetaProfile, skinId: PlayerSkinId): boolean {
+  return normalizeMetaProfile(profile).unlockedSkinIds.includes(skinId);
 }
 
 export function getMetaUpgradeCost(upgradeId: MetaUpgradeId, currentLevel: number): number {
@@ -224,7 +387,7 @@ export function getMetaUpgradeSpentCost(upgradeId: MetaUpgradeId, level: number)
   return Number.isFinite(total) ? total : 0;
 }
 
-export function getMetaResetRefund(profile: MetaProfile): number {
+export function getMetaResetRefund(profile: Pick<MetaProfile, "goldenEggs" | "metaUpgrades"> & Partial<MetaProfile>): number {
   const normalized = normalizeMetaProfile(profile);
 
   return META_UPGRADE_DEFS.reduce((total, upgrade) => total + getMetaUpgradeSpentCost(upgrade.id, normalized.metaUpgrades[upgrade.id]), 0);
@@ -235,6 +398,9 @@ export function addGoldenEggs(profile: MetaProfile, amount: number): MetaProfile
   return {
     goldenEggs: normalized.goldenEggs + Math.max(0, Math.floor(amount)),
     metaUpgrades: normalized.metaUpgrades,
+    achievements: normalized.achievements,
+    unlockedSkinIds: normalized.unlockedSkinIds,
+    selectedSkinId: normalized.selectedSkinId,
   };
 }
 
@@ -259,6 +425,9 @@ export function purchaseMetaUpgrade(profile: MetaProfile, upgradeId: MetaUpgrade
       ...normalized.metaUpgrades,
       [upgradeId]: currentLevel + 1,
     },
+    achievements: normalized.achievements,
+    unlockedSkinIds: normalized.unlockedSkinIds,
+    selectedSkinId: normalized.selectedSkinId,
   };
 }
 
@@ -273,5 +442,74 @@ export function resetMetaUpgrades(profile: MetaProfile): MetaProfile | null {
   return {
     goldenEggs: normalized.goldenEggs - 1 + refund,
     metaUpgrades: { ...EMPTY_META_UPGRADES },
+    achievements: normalized.achievements,
+    unlockedSkinIds: normalized.unlockedSkinIds,
+    selectedSkinId: normalized.selectedSkinId,
   };
+}
+
+export function purchasePlayerSkin(profile: MetaProfile, skinId: PlayerSkinId): MetaProfile | null {
+  const normalized = normalizeMetaProfile(profile);
+  const skin = PLAYER_SKIN_MAP.get(skinId);
+
+  if (!skin) {
+    return null;
+  }
+
+  if (normalized.unlockedSkinIds.includes(skinId)) {
+    return normalized.selectedSkinId === skinId
+      ? null
+      : {
+          goldenEggs: normalized.goldenEggs,
+          metaUpgrades: normalized.metaUpgrades,
+          achievements: normalized.achievements,
+          unlockedSkinIds: normalized.unlockedSkinIds,
+          selectedSkinId: skinId,
+        };
+  }
+
+  if (skin.unlockType === "achievement") {
+    return null;
+  }
+
+  if (normalized.goldenEggs < skin.cost) {
+    return null;
+  }
+
+  return {
+    goldenEggs: normalized.goldenEggs - skin.cost,
+    metaUpgrades: normalized.metaUpgrades,
+    achievements: normalized.achievements,
+    unlockedSkinIds: [...normalized.unlockedSkinIds, skinId],
+    selectedSkinId: skinId,
+  };
+}
+
+export function selectPlayerSkin(profile: MetaProfile, skinId: PlayerSkinId): MetaProfile | null {
+  const normalized = normalizeMetaProfile(profile);
+
+  if (!normalized.unlockedSkinIds.includes(skinId) || normalized.selectedSkinId === skinId) {
+    return null;
+  }
+
+  return {
+    goldenEggs: normalized.goldenEggs,
+    metaUpgrades: normalized.metaUpgrades,
+    achievements: normalized.achievements,
+    unlockedSkinIds: normalized.unlockedSkinIds,
+    selectedSkinId: skinId,
+  };
+}
+
+export function applyAchievementUnlocksToProfile(profile: MetaProfile, achievementIds: AchievementId[]): MetaProfile {
+  const normalized = normalizeMetaProfile(profile);
+  const achievements = mergeAchievementUnlocks(normalized.achievements, achievementIds);
+
+  return normalizeMetaProfile({
+    goldenEggs: normalized.goldenEggs,
+    metaUpgrades: normalized.metaUpgrades,
+    achievements,
+    unlockedSkinIds: normalized.unlockedSkinIds,
+    selectedSkinId: normalized.selectedSkinId,
+  });
 }

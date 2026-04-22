@@ -1,5 +1,6 @@
 import { UPGRADE_DEFS } from "../game/upgrades";
 import type { UpgradeId } from "../game/types";
+import { UpgradeIcon } from "./GameIcon";
 
 interface BuffSetupModalProps {
   isOpen: boolean;
@@ -57,8 +58,13 @@ export default function BuffSetupModal({
                 onClick={() => onToggleUpgrade(upgrade.id)}
                 disabled={locked}
               >
-                <span>{upgrade.shortName}</span>
-                <h3>{upgrade.name}</h3>
+                <div className="buff-card-headline">
+                  <UpgradeIcon id={upgrade.id} className="buff-card-icon" locked={!enabled} />
+                  <div>
+                    <span>{upgrade.shortName}</span>
+                    <h3>{upgrade.name}</h3>
+                  </div>
+                </div>
                 <p>{upgrade.description}</p>
                 <strong className="buff-card-state">{enabled ? (locked ? "至少保留 3 个" : "已启用") : "已关闭"}</strong>
               </button>
