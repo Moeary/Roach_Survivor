@@ -41,7 +41,7 @@ export const ACHIEVEMENT_TIERS: AchievementTierDefinition[] = [
   },
   {
     id: "cantonTwinTail",
-    label: "广东双马尾",
+    label: "广州双马尾",
     description: "困难难度的稳定毕业线，要求输出、保命和资源都在线。",
     order: 3,
   },

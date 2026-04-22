@@ -67,6 +67,168 @@ function ClassicRoachMascot({ blink, showGroundShadow }: { blink: boolean; showG
   );
 }
 
+function RoachGirlMascot({ blink, showGroundShadow }: { blink: boolean; showGroundShadow: boolean }) {
+  return (
+    <g transform="scale(1.2)">
+      {showGroundShadow ? <ellipse cx="0" cy="90" rx="40" ry="12" fill="rgba(0, 0, 0, 0.16)" /> : null}
+
+      {/* Hair turning into wings/cloak */}
+      <path d="M 0 -60 C -60 -40, -70 60, -40 100 C -20 80, -10 60, 0 40 C 10 60, 20 80, 40 100 C 70 60, 60 -40, 0 -60" fill="#222" />
+      <path d="M 0 -60 C -50 -30, -55 50, -30 90 C -15 70, -5 50, 0 35 C 5 50, 15 70, 30 90 C 55 50, 50 -30, 0 -60" fill="#111" />
+      
+      {/* Antennae */}
+      <g fill="none" stroke="#222" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M -10 -80 C -20 -110, -40 -120, -70 -125" />
+        <path d="M 10 -80 C 20 -110, 40 -120, 70 -125" />
+      </g>
+
+      {/* Body / Dress */}
+      <path d="M -15 -20 L 15 -20 L 20 20 L 25 50 L -25 50 L -20 20 Z" fill="#5a6369" />
+      <path d="M -25 50 C -15 65, 15 65, 25 50 Z" fill="#4b545a" />
+      <path d="M -28 60 C -15 75, 15 75, 28 60 Z" fill="#3c4349" />
+      <path d="M -30 70 C -15 85, 15 85, 30 70 Z" fill="#2d3338" />
+
+      {/* Arms behind back */}
+      <path d="M -15 -20 C -25 -10, -20 10, -12 25" fill="none" stroke="#fce4d6" strokeWidth="6" strokeLinecap="round" />
+      <path d="M 15 -20 C 25 -10, 20 10, 12 25" fill="none" stroke="#fce4d6" strokeWidth="6" strokeLinecap="round" />
+
+      {/* Legs */}
+      <path d="M -10 70 L -12 95" fill="none" stroke="#fce4d6" strokeWidth="6" strokeLinecap="round" />
+      <path d="M 10 70 L 12 95" fill="none" stroke="#fce4d6" strokeWidth="6" strokeLinecap="round" />
+
+      {/* Head & Face */}
+      <circle cx="0" cy="-45" r="22" fill="#fce4d6" />
+      
+      {/* Eyes */}
+      {blink ? (
+        <g fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round">
+          <path d="M -12 -45 H -4" />
+          <path d="M 4 -45 H 12" />
+        </g>
+      ) : (
+        <>
+          <ellipse cx="-8" cy="-45" rx="2" ry="4" fill="#111" />
+          <ellipse cx="8" cy="-45" rx="2" ry="4" fill="#111" />
+        </>
+      )}
+      
+      {/* Blush & Smile */}
+      <circle cx="-14" cy="-40" r="4" fill="#ffb6c1" opacity="0.6" />
+      <circle cx="14" cy="-40" r="4" fill="#ffb6c1" opacity="0.6" />
+      <path d="M -4 -38 C 0 -35, 4 -35, 4 -38" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" />
+    </g>
+  );
+}
+
+function TerraChampionMascot({ blink, showGroundShadow }: { blink: boolean; showGroundShadow: boolean }) {
+  return (
+    <g transform="scale(1.2)">
+      {showGroundShadow ? <ellipse cx="0" cy="80" rx="45" ry="12" fill="rgba(0, 0, 0, 0.16)" /> : null}
+
+      {/* Antennae */}
+      <g fill="none" stroke="#111" strokeWidth="4" strokeLinecap="round">
+        <path d="M -10 -80 C -20 -100, -30 -110, -50 -115" />
+        <path d="M 10 -80 C 20 -100, 30 -110, 50 -115" />
+      </g>
+
+      {/* Legs */}
+      <g fill="#2c2c2c" stroke="#111" strokeWidth="2">
+        <path d="M -15 30 L -25 70 L -15 80 L -5 70 Z" />
+        <path d="M 15 30 L 25 70 L 15 80 L 5 70 Z" />
+      </g>
+
+      {/* Arms */}
+      <g fill="#2c2c2c" stroke="#111" strokeWidth="2">
+        <path d="M -25 -20 L -45 5 L -35 30 L -20 20 Z" />
+        <path d="M 25 -20 L 45 5 L 35 30 L 20 20 Z" />
+      </g>
+
+      {/* Muscular Body */}
+      <path d="M 0 -40 C -30 -40, -40 0, -20 40 L 20 40 C 40 0, 30 -40, 0 -40 Z" fill="#222" />
+      <path d="M 0 -30 C -20 -30, -25 -10, -15 10 C -5 20, 5 20, 15 10 C 25 -10, 20 -30, 0 -30 Z" fill="#1a1a1a" />
+      
+      {/* Abs */}
+      <rect x="-12" y="-10" width="10" height="8" rx="2" fill="#333" />
+      <rect x="2" y="-10" width="10" height="8" rx="2" fill="#333" />
+      <rect x="-10" y="2" width="8" height="8" rx="2" fill="#333" />
+      <rect x="2" y="2" width="8" height="8" rx="2" fill="#333" />
+      <rect x="-8" y="14" width="6" height="8" rx="2" fill="#333" />
+      <rect x="2" y="14" width="6" height="8" rx="2" fill="#333" />
+      <path d="M -15 -25 C 0 -20, 15 -25, 15 -25 C 10 -15, -10 -15, -15 -25 Z" fill="#333" />
+
+      {/* Head */}
+      <circle cx="0" cy="-60" r="18" fill="#2c2c2c" />
+      <circle cx="0" cy="-60" r="16" fill="#1a1a1a" />
+
+      {/* Eyes & Face */}
+      {blink ? (
+        <g fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+          <path d="M -10 -65 H -4" />
+          <path d="M 4 -65 H 10" />
+        </g>
+      ) : (
+        <>
+          <ellipse cx="-8" cy="-65" rx="4" ry="2" fill="#fff" transform="rotate(-15 -8 -65)" />
+          <ellipse cx="8" cy="-65" rx="4" ry="2" fill="#fff" transform="rotate(15 8 -65)" />
+        </>
+      )}
+      <path d="M -5 -55 C 0 -58, 5 -58, 5 -55" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+    </g>
+  );
+}
+
+function CantonTwinTailMascot({ blink, showGroundShadow }: { blink: boolean; showGroundShadow: boolean }) {
+  return (
+    <g transform="scale(1.1)">
+      {showGroundShadow ? <ellipse cx="0" cy="80" rx="45" ry="12" fill="rgba(0, 0, 0, 0.16)" /> : null}
+
+      {/* Antennae */}
+      <g fill="none" stroke="#111" strokeWidth="3" strokeLinecap="round">
+        <path d="M -8 -80 C -30 -120, -50 -130, -70 -130" />
+        <path d="M 8 -80 C 30 -120, 50 -130, 70 -130" />
+      </g>
+
+      {/* Legs */}
+      <g fill="none" stroke="#111" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M -15 30 L -25 60 L -15 80" />
+        <path d="M 15 30 L 25 60 L 15 80" />
+      </g>
+      
+      {/* 6 Arms */}
+      <g fill="none" stroke="#111" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M -20 -30 L -45 -10 L -35 15" />
+        <path d="M 20 -30 L 45 -10 L 35 15" />
+        <path d="M -22 -10 L -50 10 L -40 35" />
+        <path d="M 22 -10 L 50 10 L 40 35" />
+        <path d="M -20 10 L -45 35 L -30 55" />
+        <path d="M 20 10 L 45 35 L 30 55" />
+      </g>
+
+      {/* Alien Armor Body */}
+      <ellipse cx="0" cy="0" rx="22" ry="45" fill="#1a1a1a" />
+      <path d="M 0 -35 C 15 -20, 15 20, 0 35 C -15 20, -15 -20, 0 -35" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.8" />
+      <path d="M -22 -15 H 22 M -24 0 H 24 M -22 15 H 22 M -18 30 H 18" stroke="#fff" strokeWidth="1.5" opacity="0.8" />
+
+      {/* Head */}
+      <ellipse cx="0" cy="-60" r="16" fill="#111" />
+      <circle cx="0" cy="-60" r="14" fill="#222" />
+
+      {/* Eyes */}
+      {blink ? (
+        <g fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+          <path d="M -8 -60 H -3" />
+          <path d="M 3 -60 H 8" />
+        </g>
+      ) : (
+        <>
+          <circle cx="-6" cy="-60" r="2.5" fill="#fff" />
+          <circle cx="6" cy="-60" r="2.5" fill="#fff" />
+        </>
+      )}
+    </g>
+  );
+}
+
 function PickleReporterMascot({ blink, showGroundShadow }: { blink: boolean; showGroundShadow: boolean }) {
   return (
     <>
@@ -243,6 +405,12 @@ export function RoachMascot({ blink = false, scale = 1, showGroundShadow = true,
     <g transform={`scale(${scale})`}>
       {variant === "pickleReporter" ? (
         <PickleReporterMascot blink={blink} showGroundShadow={showGroundShadow} />
+      ) : variant === "roachGirl" ? (
+        <RoachGirlMascot blink={blink} showGroundShadow={showGroundShadow} />
+      ) : variant === "terraChampion" ? (
+        <TerraChampionMascot blink={blink} showGroundShadow={showGroundShadow} />
+      ) : variant === "cantonTwinTail" ? (
+        <CantonTwinTailMascot blink={blink} showGroundShadow={showGroundShadow} />
       ) : variant === "labStandard" ? (
         <ClassicRoachMascot blink={blink} showGroundShadow={showGroundShadow} />
       ) : (
@@ -255,32 +423,32 @@ export function RoachMascot({ blink = false, scale = 1, showGroundShadow = true,
 export function RoachShowcase({ className, skinId = "labStandard" }: { className?: string; skinId?: PlayerSkinId }) {
   const scale =
     skinId === "pickleReporter"
-      ? 1.16
+      ? 1.7
       : skinId === "terraChampion"
-        ? 1.36
+        ? 2.0
         : skinId === "roachGirl" || skinId === "cantonTwinTail"
-          ? 1.34
+          ? 1.95
           : skinId === "americanMantis"
-            ? 1.18
+            ? 1.85
             : skinId === "northernMini"
-              ? 1.82
-              : 1.5;
+              ? 2.5
+              : 2.1;
 
   return (
-    <svg className={className} viewBox="0 0 280 340" aria-hidden="true">
-      <rect x="18" y="16" width="244" height="308" rx="40" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(214, 239, 109, 0.1)" />
+    <svg className={className} viewBox="0 0 400 520" aria-hidden="true" width="100%" style={{ maxHeight: "64vh", maxWidth: "100%" }}>
+      <rect x="20" y="20" width="360" height="480" rx="40" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(214, 239, 109, 0.1)" />
       <g fill="none" stroke="rgba(214, 239, 109, 0.12)" strokeLinecap="round">
-        <path d="M 44 52 H 86" />
-        <path d="M 44 52 V 88" />
-        <path d="M 194 52 H 236" />
-        <path d="M 236 52 V 88" />
-        <path d="M 44 286 H 86" />
-        <path d="M 44 250 V 286" />
-        <path d="M 194 286 H 236" />
-        <path d="M 236 250 V 286" />
-        <path d="M 92 286 H 188" opacity="0.44" />
+        <path d="M 60 70 H 120" />
+        <path d="M 60 70 V 130" />
+        <path d="M 280 70 H 340" />
+        <path d="M 340 70 V 130" />
+        <path d="M 60 450 H 120" />
+        <path d="M 60 390 V 450" />
+        <path d="M 280 450 H 340" />
+        <path d="M 340 390 V 450" />
+        <path d="M 140 450 H 260" opacity="0.44" />
       </g>
-      <g transform={`translate(140 188)`}>
+      <g transform={`translate(200 280)`}>
         <RoachMascot scale={scale} variant={skinId} />
       </g>
     </svg>

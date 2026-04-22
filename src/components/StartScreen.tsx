@@ -3,6 +3,7 @@ import { CURRENT_VERSION } from "../content/version";
 import { getPlayerSkinDefinition } from "../game/meta";
 import type { DifficultyId, PlayerSkinId } from "../game/types";
 import { RoachLogo } from "./sprites/player/RoachMascot";
+import { PlayIcon, BookIcon, VolumeIcon, FileTextIcon, SkullIcon, StarIcon, TrophyIcon, TargetIcon, ZapIcon, ArrowUpIcon, SmileIcon } from "./Icons";
 
 interface StartScreenProps {
   difficultyId: DifficultyId;
@@ -63,32 +64,34 @@ export default function StartScreen({
             <h1>卵鞘危机</h1>
 
             <div className="hero-actions">
-              <button className="button-primary" type="button" onClick={onStart}>
-                开始游戏
+              <button className="button-primary menu-action-btn" type="button" onClick={onStart}>
+                <PlayIcon className="btn-icon" /> 开始游戏
               </button>
-              <button className="button-secondary" type="button" onClick={onOpenTutorial}>
-                查看教程
+              <button className="button-secondary menu-action-btn" type="button" onClick={onOpenTutorial}>
+                <BookIcon className="btn-icon" /> 查看教程
               </button>
-              <button className="button-secondary" type="button" onClick={onOpenVolumeSettings}>
-                音量调整
+              <button className="button-secondary menu-action-btn" type="button" onClick={onOpenVolumeSettings}>
+                <VolumeIcon className="btn-icon" /> 音量调整
               </button>
-              <button className="button-secondary" type="button" onClick={onOpenChangelog}>
-                版本更新日志
+              <button className="button-secondary menu-action-btn" type="button" onClick={onOpenChangelog}>
+                <FileTextIcon className="btn-icon" /> 版本更新日志
               </button>
-              <button className="button-secondary" type="button" onClick={onOpenCompendium}>
-                怪物图鉴
+              <button className="button-secondary menu-action-btn" type="button" onClick={onOpenCompendium}>
+                <SkullIcon className="btn-icon" /> 怪物图鉴
               </button>
-              <button className="button-secondary" type="button" onClick={onOpenRelicCodex}>
-                圣遗物图鉴
+              <button className="button-secondary menu-action-btn" type="button" onClick={onOpenRelicCodex}>
+                <StarIcon className="btn-icon" /> 圣遗物图鉴
               </button>
-              <button className="button-secondary" type="button" onClick={onOpenAchievements}>
-                成就档案
+              <button className="button-secondary menu-action-btn" type="button" onClick={onOpenAchievements}>
+                <TrophyIcon className="btn-icon" /> 成就档案
               </button>
             </div>
 
             <div className="menu-config-grid">
               <section className="config-card">
-                <span>难度轮盘</span>
+                <span>
+                  <TargetIcon className="card-icon" /> 难度轮盘
+                </span>
                 <div className="difficulty-row">
                   {DIFFICULTY_ORDER.map((optionId) => {
                     const option = getDifficultyConfig(optionId);
@@ -108,7 +111,9 @@ export default function StartScreen({
               </section>
 
               <section className="config-card">
-                <span>本局 Buff</span>
+                <span>
+                  <ZapIcon className="card-icon" /> 本局 Buff
+                </span>
                 <strong>
                   已启用 {enabledBuffCount} / {totalBuffCount}
                 </strong>
@@ -119,7 +124,9 @@ export default function StartScreen({
               </section>
 
               <section className="config-card">
-                <span>局外成长</span>
+                <span>
+                  <ArrowUpIcon className="card-icon" /> 局外成长
+                </span>
                 <strong>{goldenEggs} 枚金色卵鞘</strong>
                 <p>可用来强化主角开局攻击、速度、血量和自动回血。进度会自动保存在本地。</p>
                 <button className="button-secondary" type="button" onClick={onOpenMetaUpgrade}>
@@ -128,7 +135,9 @@ export default function StartScreen({
               </section>
 
               <section className="config-card config-card-skin">
-                <span>广东人的神必实验室</span>
+                <span>
+                  <SmileIcon className="card-icon" /> 广东人的神必实验室
+                </span>
                 <strong>{selectedSkin.name}</strong>
                 <p>已收藏 {unlockedSkinCount} / {totalSkinCount} 套外观，切换后右侧展示柜会同步换成当前皮肤。</p>
                 <button className="button-secondary" type="button" onClick={onOpenSkinLab}>
