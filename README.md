@@ -42,7 +42,7 @@
 
 请直接访问 Vercel 部署的镜像网站 [https://roach-survivor.vercel.app/](https://roach-survivor.vercel.app/) 试玩。
 
-或者访问 Cloudflare Pages 部署的镜像网站 [https://roach-survivor.pages.dev/](https://roach-survivor.pages.dev/) 试玩。
+或者访问 [Cloudflare Pages 部署的镜像网站](https://roach.helicopter.lgbt) 试玩。
 
 ### 使用 Electron 打包的桌面应用进行游玩
 
