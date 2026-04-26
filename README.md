@@ -9,7 +9,7 @@
 - **技术栈**：React 19、TypeScript、Vite、Electron
 - **目标平台**：现代浏览器、Windows / Linux 桌面端
 - **核心体验**：即时移动射击 + 幸存者式升级选择 + 局外成长
-- **当前内容量**：3 档难度、3 波 Boss、10 个本局 Buff、8 项局外升级
+- **当前内容量**：3 档难度、3 波 Boss、12 个本局 Buff、8 项局外升级
 
 ## 核心特色
 
@@ -24,9 +24,9 @@
   - Boss 拥有独立技能阶段：贴脸传送、障碍穿越冲刺、召唤杂兵与旧 Boss 支援。
 
 - **成型感更强的成长系统**
-  - 本局提供 10 个可自定义启用的 Buff，支持专门测试某条构筑路线。
+  - 本局提供 12 个可自定义启用的 Buff，支持专门测试某条构筑路线。
   - 局外成长提供 8 项升级，包括基础伤害、移速、血量、经验吸附、接触减伤、升级回血等。
-  - 金色卵鞘通过 Cookie 持久化，回到主菜单后可继续投入外部强化。
+  - 金色卵鞘通过 localStorage 持久化，旧 Cookie 存档会自动迁移，回到主菜单后可继续投入外部强化。
 
 - **完整的音频接线**
   - 已接入菜单 / 战斗 / Boss / 胜利 BGM。
@@ -35,6 +35,7 @@
 ## 操作说明
 
 - `WASD` / 方向键：移动
+- 手机端触控：按住战场任意方向移动，并自动开启自瞄
 - 鼠标进入战场：接管瞄准
 - `Esc`：释放鼠标瞄准
 - `1` / `2` / `3`：选择升级
@@ -79,7 +80,7 @@ docker compose up --build
 ```
 
 - 默认通过 `http://localhost:8080` 提供静态页面。
-- `Dockerfile` 使用多阶段构建：Node 负责编译 Vite，Nginx 负责分发 `dist/`。
+- `Dockerfile` 使用多阶段构建：Node 负责编译 Vite，并由最终镜像直接分发 `dist/`。
 
 ## 目录结构
 
@@ -88,7 +89,7 @@ docker compose up --build
 - `src/components/GameScreen.tsx`：主战场视图、HUD、输入接线、结算层
 - `src/game/core.ts`：核心循环、碰撞、敌人生成、Boss 技能、Buff 生效逻辑
 - `src/game/entities/`：玩家和敌人基础数据
-- `src/game/meta/`：局外成长定义与 Cookie 存档
+- `src/game/meta/`：局外成长定义与 localStorage 存档
 - `src/game/upgrades/`：本局 Buff 定义、选择与摘要逻辑
 - `src/audio/gameAudio.ts`：BGM / SFX 控制器与事件消费
 - `public/audio/`：音频资源目录

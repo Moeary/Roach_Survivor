@@ -18,6 +18,7 @@ export default {
   linux: {
     artifactName: `${productName}-linux-amd64-${artifactVersion}.\${ext}`,
     category: "Game",
+    icon: "build/icon.png",
     target: [
       {
         arch: ["x64"],
@@ -29,6 +30,7 @@ export default {
   productName,
   win: {
     artifactName: `${productName}-windows-amd64-${artifactVersion}.\${ext}`,
+    icon: "build/icon.ico",
     target: [
       {
         arch: ["x64"],

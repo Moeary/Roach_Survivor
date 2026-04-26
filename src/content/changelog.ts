@@ -7,6 +7,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "v1.0 Mobile Release & Final Polish",
+    date: "2026-04-26",
+    summary: "正式版收口：补齐手机端首屏与局内触控兼容，换用 localStorage 存档，并整理桌面端与容器化发布资源。",
+    items: [
+      "主页响应式布局重排，桌面端保持原样，手机端改为独立紧凑视图，按钮与功能入口会自动换行。",
+      "局内战斗在手机端自动启用触控移动与自瞄，并在进入战斗前提示电脑端体验更完整。",
+      "局外成长存档迁移到 localStorage，旧 Cookie 存档会自动无感导入并清理。",
+      "Docker 镜像改为 Node 直接分发 Vite dist，不再依赖 Nginx 代理配置。",
+      "重绘 Electron 图标与高阶成就皮肤资源，项目当前版本更新为 v1.0。",
+    ],
+  },
+  {
     version: "v0.10 Achievements, Mutants & Skin Rewards",
     date: "2026-04-21",
     summary: "新增分级成就、机制型敌人、三阶段最终 Boss 和更多可购买/成就奖励皮肤。",

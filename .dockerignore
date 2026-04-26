@@ -1,7 +1,14 @@
 node_modules
 dist
 release
+release/
+build
 .git
 .github
 docs
+.codex-temp
+*.tsbuildinfo
+*.log
 npm-debug.log*
+public/audio/**/*.mp3
+public/audio/README.md
