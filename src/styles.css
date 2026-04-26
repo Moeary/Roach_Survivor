@@ -36,6 +36,7 @@ body {
 }
 
 button,
+a,
 input,
 textarea,
 select {
@@ -417,6 +418,28 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+.star-prompt-card {
+  width: min(620px, calc(100vw - 32px));
+}
+
+.star-repo-link {
+  display: block;
+  margin-top: 22px;
+  padding: 14px 16px;
+  overflow-wrap: anywhere;
+  border: 1px solid rgba(214, 239, 109, 0.16);
+  border-radius: 14px;
+  color: var(--lime);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.star-repo-link:hover,
+.star-repo-link:focus-visible {
+  outline: none;
+  border-color: rgba(214, 239, 109, 0.34);
+}
+
 .relic-card {
   border-color: rgba(180, 140, 255, 0.3) !important;
 }
@@ -478,9 +501,14 @@ select {
 
 .button-primary,
 .button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 14px 22px;
   border: 1px solid rgba(214, 239, 109, 0.24);
   cursor: pointer;
+  text-decoration: none;
 }
 
 .button-primary {

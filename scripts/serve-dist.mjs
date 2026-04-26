@@ -53,5 +53,5 @@ createServer((request, response) => {
     })
     .pipe(response);
 }).listen(port, host, () => {
-  console.log(`Roach Survival is serving ${root} at http://${host}:${port}`);
+  console.log(`Roach Survivor is serving ${root} at http://${host}:${port}`);
 });

@@ -1,5 +1,5 @@
 (function (global) {
-  const NS = global.CockroachSurvivor = global.CockroachSurvivor || {};
+  const NS = global.RoachSurvivor = global.RoachSurvivor || {};
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));

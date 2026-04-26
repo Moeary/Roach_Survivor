@@ -1,5 +1,5 @@
 (function (global) {
-  const NS = global.CockroachSurvivor = global.CockroachSurvivor || {};
+  const NS = global.RoachSurvivor = global.RoachSurvivor || {};
 
   const VIEWPORT_WIDTH = 1280;
   const VIEWPORT_HEIGHT = 720;

@@ -1,8 +1,8 @@
 {
-  "name": "roach-survival",
+  "name": "roach-survivor",
   "private": true,
   "version": "1.0.0",
-  "description": "Ootheca Crisis / Roach Survival roguelite game built with React, TypeScript, Vite, and Electron.",
+  "description": "Roach Survivor roguelite game built with React, TypeScript, Vite, and Electron.",
   "author": "Moeary",
   "type": "module",
   "main": "electron/main.cjs",

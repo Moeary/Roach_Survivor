@@ -1,4 +1,5 @@
 import { DIFFICULTY_ORDER, getDifficultyConfig } from "../game/run/config";
+import { GITHUB_REPOSITORY_URL } from "../content/links";
 import { CURRENT_VERSION } from "../content/version";
 import { getPlayerSkinDefinition } from "../game/meta";
 import type { DifficultyId, PlayerSkinId } from "../game/types";
@@ -85,6 +86,9 @@ export default function StartScreen({
               <button className="button-secondary menu-action-btn" type="button" onClick={onOpenAchievements}>
                 <TrophyIcon className="btn-icon" /> 成就档案
               </button>
+              <a className="button-secondary menu-action-btn" href={GITHUB_REPOSITORY_URL} target="_blank" rel="noreferrer">
+                <StarIcon className="btn-icon" /> GitHub Star
+              </a>
             </div>
 
             <div className="menu-config-grid">

@@ -14,6 +14,7 @@ import {
   updateGame,
 } from "../game/core";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { GITHUB_REPOSITORY_URL } from "../content/links";
 import { RELIC_DEFS } from "../game/relics";
 import { getBossWaveTime } from "../game/stages";
 import { buildAchievementRunResult, type AchievementRunResult } from "../game/achievements";
@@ -179,6 +180,7 @@ const SKILL_HOTBAR_SLOTS = 8;
 const RELIC_HOTBAR_SLOTS = 5;
 const MOBILE_CONTROLS_MEDIA_QUERY = "(pointer: coarse), (max-width: 720px)";
 const MOBILE_MOVEMENT_DEADZONE = 34;
+const STAR_PROMPT_CHANCE = 0.1;
 
 function HealthHeart({ fill, index }: { fill: number; index: number }) {
   const clipId = `heart-fill-${index}`;
@@ -235,6 +237,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
   const mobileNoticeSeenRef = useRef(false);
   const [isMobileControls, setIsMobileControls] = useState(false);
   const [mobileNoticeOpen, setMobileNoticeOpen] = useState(false);
+  const [starPromptOpen, setStarPromptOpen] = useState(false);
   const [, forceRender] = useState(0);
 
   if (!audioRef.current) {
@@ -417,6 +420,20 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
       lastFrameRef.current = performance.now();
       refresh();
     }
+  }
+
+  function returnToMenuAfterVictory() {
+    if (Math.random() < STAR_PROMPT_CHANCE) {
+      setStarPromptOpen(true);
+      return;
+    }
+
+    onReturnToMenu();
+  }
+
+  function closeStarPromptAndReturnToMenu() {
+    setStarPromptOpen(false);
+    onReturnToMenu();
   }
 
   useEffect(() => {
@@ -793,6 +810,24 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
             </div>
           </section>
         </div>
+      ) : starPromptOpen ? (
+        <div className="overlay-shell">
+          <section className="overlay-card star-prompt-card">
+            <p className="menu-eyebrow">SUPPORT PROJECT</p>
+            <h2>都打通关了，顺手给项目点个 Star 怎么样？</h2>
+            <a className="star-repo-link" href={GITHUB_REPOSITORY_URL} target="_blank" rel="noreferrer">
+              {GITHUB_REPOSITORY_URL}
+            </a>
+            <div className="modal-actions">
+              <a className="button-primary" href={GITHUB_REPOSITORY_URL} target="_blank" rel="noreferrer">
+                打开 GitHub
+              </a>
+              <button className="button-secondary" type="button" onClick={closeStarPromptAndReturnToMenu}>
+                返回主菜单
+              </button>
+            </div>
+          </section>
+        </div>
       ) : state.runState !== "running" ? (
         <div className="overlay-shell">
           <section className="overlay-card">
@@ -886,7 +921,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
                   <button className="button-primary" type="button" onClick={restartRun}>
                     再来一局
                   </button>
-                  <button className="button-secondary" type="button" onClick={onReturnToMenu}>
+                  <button className="button-secondary" type="button" onClick={returnToMenuAfterVictory}>
                     返回主菜单
                   </button>
                 </div>

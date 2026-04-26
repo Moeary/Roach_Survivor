@@ -131,7 +131,7 @@ export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
     ],
   },
   {
-    version: "v0.1 React Migration Demo",
+    version: "v0.1 React Migration",
     date: "2026-04-08",
     summary: "原始原生 JS 版本迁移到 React + TypeScript + Vite。",
     items: [

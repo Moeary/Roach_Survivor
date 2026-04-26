@@ -1,5 +1,5 @@
 services:
-  cockroach-survivor:
+  roach-survivor:
     build:
       context: .
       dockerfile: Dockerfile
