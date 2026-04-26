@@ -9,12 +9,13 @@
     "dev": "vite --config vite.config.ts",
     "build:web": "tsc -b && vite build --config vite.config.ts",
     "build": "npm run build:web",
-    "preview": "vite preview --config vite.config.ts",
+    "preview": "npm run build:web && wrangler dev",
     "electron:build": "npm run build:web && electron-builder --config electron-builder.config.mjs --dir",
     "electron:dist": "npm run build:web && electron-builder --config electron-builder.config.mjs --publish never",
     "electron:dist:win": "npm run build:web && electron-builder --config electron-builder.config.mjs --publish never --win nsis --x64",
     "electron:dist:linux": "npm run build:web && electron-builder --config electron-builder.config.mjs --publish never --linux AppImage --x64",
-    "release:sync-version": "node scripts/sync-version-from-tag.mjs"
+    "release:sync-version": "node scripts/sync-version-from-tag.mjs",
+    "deploy": "npm run build:web && wrangler deploy"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
@@ -22,12 +23,14 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.33.2",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^5.0.0",
     "electron": "^41.2.0",
     "electron-builder": "^26.8.1",
     "typescript": "^5.8.3",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "wrangler": "^4.85.0"
   }
 }
