@@ -13,6 +13,8 @@ import {
   togglePause,
   updateGame,
 } from "../game/core";
+import type { PointerEvent as ReactPointerEvent } from "react";
+import { GITHUB_REPOSITORY_URL } from "../content/links";
 import { RELIC_DEFS } from "../game/relics";
 import { getBossWaveTime } from "../game/stages";
 import { buildAchievementRunResult, type AchievementRunResult } from "../game/achievements";
@@ -176,6 +178,9 @@ const MOVEMENT_KEY_CODES = ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDow
 const HEART_COUNT = 10;
 const SKILL_HOTBAR_SLOTS = 8;
 const RELIC_HOTBAR_SLOTS = 5;
+const MOBILE_CONTROLS_MEDIA_QUERY = "(pointer: coarse), (max-width: 720px)";
+const MOBILE_MOVEMENT_DEADZONE = 34;
+const STAR_PROMPT_CHANCE = 0.1;
 
 function HealthHeart({ fill, index }: { fill: number; index: number }) {
   const clipId = `heart-fill-${index}`;
@@ -226,6 +231,13 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
   const awardGoldenEggsRef = useRef(onAwardGoldenEggs);
   const completeRunRef = useRef(onCompleteRun);
   const audioRef = useRef<GameAudioController | null>(null);
+  const isMobileControlsRef = useRef(false);
+  const mobilePointerIdRef = useRef<number | null>(null);
+  const mobileNoticePausedRunRef = useRef(false);
+  const mobileNoticeSeenRef = useRef(false);
+  const [isMobileControls, setIsMobileControls] = useState(false);
+  const [mobileNoticeOpen, setMobileNoticeOpen] = useState(false);
+  const [starPromptOpen, setStarPromptOpen] = useState(false);
   const [, forceRender] = useState(0);
 
   if (!audioRef.current) {
@@ -239,6 +251,9 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
   function restartRun() {
     stateRef.current = createGameState(setup);
     resetInputState(inputRef.current);
+    if (isMobileControlsRef.current) {
+      inputRef.current.autoAim = true;
+    }
     completionReportedRef.current = false;
     lastFrameRef.current = performance.now();
     refresh();
@@ -324,6 +339,103 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
     inputRef.current.aimActive = true;
   }
 
+  function setMobileMovementFromPointer(clientX: number, clientY: number): boolean {
+    const svg = svgRef.current;
+
+    if (!svg) {
+      return false;
+    }
+
+    const bounds = svg.getBoundingClientRect();
+    const x = ((clientX - bounds.left) / bounds.width) * 1280;
+    const y = ((clientY - bounds.top) / bounds.height) * 720;
+    const deltaX = x - 640;
+    const deltaY = y - 360;
+    const isMoving = Math.hypot(deltaX, deltaY) > MOBILE_MOVEMENT_DEADZONE;
+
+    inputRef.current.left = isMoving && deltaX < -MOBILE_MOVEMENT_DEADZONE;
+    inputRef.current.right = isMoving && deltaX > MOBILE_MOVEMENT_DEADZONE;
+    inputRef.current.up = isMoving && deltaY < -MOBILE_MOVEMENT_DEADZONE;
+    inputRef.current.down = isMoving && deltaY > MOBILE_MOVEMENT_DEADZONE;
+
+    if (isMoving && stateRef.current.runState === "running") {
+      stateRef.current.sessionStats.usedMovementKeys = true;
+    }
+
+    return isMoving;
+  }
+
+  function clearMobileMovement() {
+    inputRef.current.up = false;
+    inputRef.current.down = false;
+    inputRef.current.left = false;
+    inputRef.current.right = false;
+    inputRef.current.aimActive = false;
+    mobilePointerIdRef.current = null;
+    refresh();
+  }
+
+  function handleMobilePointerDown(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!isMobileControlsRef.current || event.pointerType === "mouse") {
+      return;
+    }
+
+    event.preventDefault();
+    audioRef.current?.unlock();
+    inputRef.current.autoAim = true;
+    mobilePointerIdRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    updatePointerPosition(event.clientX, event.clientY);
+    setMobileMovementFromPointer(event.clientX, event.clientY);
+    refresh();
+  }
+
+  function handleMobilePointerMove(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!isMobileControlsRef.current || event.pointerId !== mobilePointerIdRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    updatePointerPosition(event.clientX, event.clientY);
+    setMobileMovementFromPointer(event.clientX, event.clientY);
+    refresh();
+  }
+
+  function handleMobilePointerEnd(event: ReactPointerEvent<SVGSVGElement>) {
+    if (!isMobileControlsRef.current || event.pointerId !== mobilePointerIdRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    clearMobileMovement();
+  }
+
+  function dismissMobileNotice() {
+    setMobileNoticeOpen(false);
+
+    if (mobileNoticePausedRunRef.current && stateRef.current.runState === "paused") {
+      stateRef.current.runState = "running";
+      mobileNoticePausedRunRef.current = false;
+      lastFrameRef.current = performance.now();
+      refresh();
+    }
+  }
+
+  function returnToMenuAfterVictory() {
+    if (Math.random() < STAR_PROMPT_CHANCE) {
+      setStarPromptOpen(true);
+      return;
+    }
+
+    onReturnToMenu();
+  }
+
+  function closeStarPromptAndReturnToMenu() {
+    setStarPromptOpen(false);
+    onReturnToMenu();
+  }
+
   useEffect(() => {
     awardGoldenEggsRef.current = onAwardGoldenEggs;
   }, [onAwardGoldenEggs]);
@@ -335,6 +447,41 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
   useEffect(() => {
     audioRef.current?.setSettings(audioSettings);
   }, [audioSettings]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_CONTROLS_MEDIA_QUERY);
+
+    function applyMobileControlsPreference() {
+      const enabled = mediaQuery.matches;
+      isMobileControlsRef.current = enabled;
+      setIsMobileControls(enabled);
+
+      if (!enabled) {
+        return;
+      }
+
+      inputRef.current.autoAim = true;
+
+      if (!mobileNoticeSeenRef.current) {
+        mobileNoticeSeenRef.current = true;
+        setMobileNoticeOpen(true);
+
+        if (stateRef.current.runState === "running") {
+          stateRef.current.runState = "paused";
+          mobileNoticePausedRunRef.current = true;
+        }
+
+        refresh();
+      }
+    }
+
+    applyMobileControlsPreference();
+    mediaQuery.addEventListener("change", applyMobileControlsPreference);
+
+    return () => {
+      mediaQuery.removeEventListener("change", applyMobileControlsPreference);
+    };
+  }, []);
 
   useEffect(() => {
     function setDirection(code: string, pressed: boolean) {
@@ -510,7 +657,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
   const overlayEffects = visibleEffects.filter((effect) => effect.type !== "blood-pool" && effect.type !== "acid-pool");
 
   return (
-    <main className={`game-screen ${input.aimActive ? "game-screen-aiming" : ""}`} onContextMenu={(event) => event.preventDefault()}>
+    <main className={`game-screen ${input.aimActive ? "game-screen-aiming" : ""} ${isMobileControls ? "game-screen-mobile-controls" : ""}`} onContextMenu={(event) => event.preventDefault()}>
       <svg
         ref={svgRef}
         className="game-svg"
@@ -534,6 +681,10 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
           updatePointerPosition(event.clientX, event.clientY);
           refresh();
         }}
+        onPointerDown={handleMobilePointerDown}
+        onPointerMove={handleMobilePointerMove}
+        onPointerCancel={handleMobilePointerEnd}
+        onPointerUp={handleMobilePointerEnd}
       >
         <WorldDefs />
 
@@ -557,6 +708,10 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
 
       {!input.aimActive && !input.autoAim && state.runState === "running" ? (
         <div className="aim-hint">把鼠标移进战场接管瞄准，按 Esc 释放。按 F 切换自瞄。</div>
+      ) : null}
+
+      {isMobileControls && !mobileNoticeOpen && state.runState === "running" ? (
+        <div className="mobile-control-hint">移动端试玩：按住战场控制移动，自瞄已开启。</div>
       ) : null}
 
       <div className="hud-top">
@@ -639,7 +794,41 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
         </section>
       </div>
 
-      {state.runState !== "running" ? (
+      {mobileNoticeOpen ? (
+        <div className="mobile-notice-backdrop">
+          <section className="mobile-notice-card">
+            <p className="menu-eyebrow">MOBILE MODE</p>
+            <h2>移动端只是临时兼容</h2>
+            <p className="overlay-copy">这套玩法仍然更适合电脑端。手机上会自动开启自瞄，按住战场并朝想去的方向拖动即可移动。</p>
+            <div className="modal-actions">
+              <button className="button-primary" type="button" onClick={dismissMobileNotice}>
+                继续试玩
+              </button>
+              <button className="button-secondary" type="button" onClick={onReturnToMenu}>
+                返回主菜单
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : starPromptOpen ? (
+        <div className="overlay-shell">
+          <section className="overlay-card star-prompt-card">
+            <p className="menu-eyebrow">SUPPORT PROJECT</p>
+            <h2>都打通关了，顺手给项目点个 Star 怎么样？</h2>
+            <a className="star-repo-link" href={GITHUB_REPOSITORY_URL} target="_blank" rel="noreferrer">
+              {GITHUB_REPOSITORY_URL}
+            </a>
+            <div className="modal-actions">
+              <a className="button-primary" href={GITHUB_REPOSITORY_URL} target="_blank" rel="noreferrer">
+                打开 GitHub
+              </a>
+              <button className="button-secondary" type="button" onClick={closeStarPromptAndReturnToMenu}>
+                返回主菜单
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : state.runState !== "running" ? (
         <div className="overlay-shell">
           <section className="overlay-card">
             {state.runState === "levelup" ? (
@@ -732,7 +921,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
                   <button className="button-primary" type="button" onClick={restartRun}>
                     再来一局
                   </button>
-                  <button className="button-secondary" type="button" onClick={onReturnToMenu}>
+                  <button className="button-secondary" type="button" onClick={returnToMenuAfterVictory}>
                     返回主菜单
                   </button>
                 </div>

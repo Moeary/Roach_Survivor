@@ -140,7 +140,8 @@ const SFX_INTERVAL_MS: Record<AudioCueId, number> = {
 };
 
 const AUDIO_TEMPLATE_CACHE = new Map<string, HTMLAudioElement>();
-const AUDIO_SETTINGS_STORAGE_KEY = "cockroach-survivor-audio-settings";
+const LEGACY_AUDIO_SETTINGS_STORAGE_KEY = "cockroach-survivor-audio-settings";
+const AUDIO_SETTINGS_STORAGE_KEY = "roach-survivor-audio-settings";
 let audioWarmupScheduled = false;
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
@@ -167,13 +168,16 @@ export function loadAudioSettings(): AudioSettings {
   }
 
   try {
-    const raw = window.localStorage.getItem(AUDIO_SETTINGS_STORAGE_KEY);
+    const raw = window.localStorage.getItem(AUDIO_SETTINGS_STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_AUDIO_SETTINGS_STORAGE_KEY);
 
     if (!raw) {
       return DEFAULT_AUDIO_SETTINGS;
     }
 
-    return normalizeAudioSettings(JSON.parse(raw) as Partial<AudioSettings>);
+    const settings = normalizeAudioSettings(JSON.parse(raw) as Partial<AudioSettings>);
+    window.localStorage.setItem(AUDIO_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    window.localStorage.removeItem(LEGACY_AUDIO_SETTINGS_STORAGE_KEY);
+    return settings;
   } catch {
     return DEFAULT_AUDIO_SETTINGS;
   }
@@ -186,6 +190,7 @@ export function saveAudioSettings(settings: AudioSettings): void {
 
   try {
     window.localStorage.setItem(AUDIO_SETTINGS_STORAGE_KEY, JSON.stringify(normalizeAudioSettings(settings)));
+    window.localStorage.removeItem(LEGACY_AUDIO_SETTINGS_STORAGE_KEY);
   } catch {
     // Ignore storage failures and keep in-memory settings only.
   }

@@ -1,8 +1,9 @@
 {
-  "name": "cockroach-survivor-demo",
+  "name": "roach-survivor",
   "private": true,
-  "version": "0.10.0",
-  "description": "Roach survivor roguelite game built with React, TypeScript, Vite, and Electron.",
+  "version": "1.0.0",
+  "description": "Roach Survivor roguelite game built with React, TypeScript, Vite, and Electron.",
+  "author": "Moeary",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {

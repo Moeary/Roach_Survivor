@@ -1,5 +1,5 @@
 (function (global) {
-  const NS = global.CockroachSurvivor = global.CockroachSurvivor || {};
+  const NS = global.RoachSurvivor = global.RoachSurvivor || {};
 
   function onReady(callback) {
     if (document.readyState === "loading") {

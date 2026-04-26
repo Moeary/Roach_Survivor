@@ -7,6 +7,76 @@ interface RoachMascotProps {
   variant?: PlayerSkinId;
 }
 
+type GeneratedSkinId = "terraChampion" | "cantonTwinTail";
+
+const GENERATED_SKIN_CONFIG: Record<
+  GeneratedSkinId,
+  {
+    height: number;
+    href: string;
+    shadowCx: number;
+    shadowCy: number;
+    shadowRx: number;
+    shadowRy: number;
+    width: number;
+    x: number;
+    y: number;
+  }
+> = {
+  terraChampion: {
+    height: 260,
+    href: "/assets/skins/terraChampion.png",
+    shadowCx: 0,
+    shadowCy: 91,
+    shadowRx: 54,
+    shadowRy: 13,
+    width: 174,
+    x: -87,
+    y: -158,
+  },
+  cantonTwinTail: {
+    height: 245,
+    href: "/assets/skins/cantonTwinTail.png",
+    shadowCx: 0,
+    shadowCy: 93,
+    shadowRx: 62,
+    shadowRy: 13,
+    width: 196,
+    x: -98,
+    y: -150,
+  },
+};
+
+function isGeneratedSkinId(skinId: PlayerSkinId): skinId is GeneratedSkinId {
+  return skinId === "terraChampion" || skinId === "cantonTwinTail";
+}
+
+function GeneratedSkinMascot({ showGroundShadow, skinId }: { showGroundShadow: boolean; skinId: GeneratedSkinId }) {
+  const config = GENERATED_SKIN_CONFIG[skinId];
+
+  return (
+    <>
+      {showGroundShadow ? (
+        <ellipse
+          cx={config.shadowCx}
+          cy={config.shadowCy}
+          rx={config.shadowRx}
+          ry={config.shadowRy}
+          fill="rgba(0, 0, 0, 0.2)"
+        />
+      ) : null}
+      <image
+        href={config.href}
+        x={config.x}
+        y={config.y}
+        width={config.width}
+        height={config.height}
+        preserveAspectRatio="xMidYMid meet"
+      />
+    </>
+  );
+}
+
 function ClassicRoachMascot({ blink, showGroundShadow }: { blink: boolean; showGroundShadow: boolean }) {
   return (
     <>
@@ -403,14 +473,12 @@ function LabVariantMascot({ blink, showGroundShadow, skinId }: { blink: boolean;
 export function RoachMascot({ blink = false, scale = 1, showGroundShadow = true, variant = "labStandard" }: RoachMascotProps) {
   return (
     <g transform={`scale(${scale})`}>
-      {variant === "pickleReporter" ? (
+      {isGeneratedSkinId(variant) ? (
+        <GeneratedSkinMascot skinId={variant} showGroundShadow={showGroundShadow} />
+      ) : variant === "pickleReporter" ? (
         <PickleReporterMascot blink={blink} showGroundShadow={showGroundShadow} />
       ) : variant === "roachGirl" ? (
         <RoachGirlMascot blink={blink} showGroundShadow={showGroundShadow} />
-      ) : variant === "terraChampion" ? (
-        <TerraChampionMascot blink={blink} showGroundShadow={showGroundShadow} />
-      ) : variant === "cantonTwinTail" ? (
-        <CantonTwinTailMascot blink={blink} showGroundShadow={showGroundShadow} />
       ) : variant === "labStandard" ? (
         <ClassicRoachMascot blink={blink} showGroundShadow={showGroundShadow} />
       ) : (

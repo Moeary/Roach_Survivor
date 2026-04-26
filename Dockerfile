@@ -8,11 +8,16 @@ RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build
 
-FROM nginx:alpine
+FROM node:22-alpine
 
-COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-EXPOSE 80
+ENV NODE_ENV=production
+ENV PORT=8080
 
-CMD ["nginx", "-g", "daemon off;"]
+COPY --from=build /app/dist ./dist
+COPY scripts/serve-dist.mjs ./scripts/serve-dist.mjs
+
+EXPOSE 8080
+
+CMD ["node", "scripts/serve-dist.mjs"]

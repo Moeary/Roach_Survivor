@@ -15,7 +15,6 @@ Thumbs.db
 .idea/
 .codex-temp/
 
-docs/*
 public/audio/**/*.mp3
 public/audio/README.md
 
