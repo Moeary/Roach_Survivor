@@ -269,88 +269,116 @@ function toFixed(value: number): number {
   return Number(value.toFixed(1));
 }
 
+type BossSpriteAsset = {
+  href: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  shadowRx: number;
+  shadowRy: number;
+  shadowCy: number;
+  healthX: number;
+  healthY: number;
+  healthWidth: number;
+  healthHeight: number;
+  healthFill: string;
+};
+
+const BOSS_SPRITE_ASSETS: Record<number, BossSpriteAsset> = {
+  1: {
+    href: "/sprites/bosses/boss-1-hive-queen.png?v=alpha2",
+    x: -154,
+    y: -96,
+    width: 308,
+    height: 205,
+    shadowRx: 98,
+    shadowRy: 40,
+    shadowCy: 24,
+    healthX: -84,
+    healthY: -108,
+    healthWidth: 168,
+    healthHeight: 10,
+    healthFill: "#e74a5a",
+  },
+  2: {
+    href: "/sprites/bosses/boss-2-split-leg-tyrant.png?v=alpha2",
+    x: -174,
+    y: -112,
+    width: 348,
+    height: 232,
+    shadowRx: 110,
+    shadowRy: 34,
+    shadowCy: 24,
+    healthX: -92,
+    healthY: -122,
+    healthWidth: 184,
+    healthHeight: 12,
+    healthFill: "#ff7044",
+  },
+  3: {
+    href: "/sprites/bosses/boss-3-brood-nest.png?v=alpha2",
+    x: -210,
+    y: -130,
+    width: 420,
+    height: 280,
+    shadowRx: 138,
+    shadowRy: 50,
+    shadowCy: 38,
+    healthX: -110,
+    healthY: -146,
+    healthWidth: 220,
+    healthHeight: 14,
+    healthFill: "#df4d66",
+  },
+};
+
+function getBossSpriteAsset(bossWave: number): BossSpriteAsset {
+  return BOSS_SPRITE_ASSETS[bossWave] ?? BOSS_SPRITE_ASSETS[1]!;
+}
+
+function renderBossHealthBar(asset: BossSpriteAsset, hpRatio: number) {
+  return (
+    <>
+      <rect
+        x={asset.healthX}
+        y={asset.healthY}
+        width={asset.healthWidth}
+        height={asset.healthHeight}
+        rx={asset.healthHeight / 2}
+        fill="rgba(0, 0, 0, 0.42)"
+      />
+      <rect
+        x={asset.healthX}
+        y={asset.healthY}
+        width={toFixed(asset.healthWidth * hpRatio)}
+        height={asset.healthHeight}
+        rx={asset.healthHeight / 2}
+        fill={asset.healthFill}
+      />
+    </>
+  );
+}
+
 function renderBoss(enemy: EnemyEntity, hpRatio: number, transform: string) {
   const bossWave = enemy.bossWave ?? 1;
-
-  if (bossWave === 2) {
-    return (
-      <g transform={transform}>
-        <ellipse cx="0" cy="18" rx="110" ry="34" fill="rgba(0, 0, 0, 0.26)" />
-        <g stroke="#4a1d1b" strokeWidth="8" strokeLinecap="round">
-          <path d="M -54 -6 L -152 -58" />
-          <path d="M -62 18 L -164 6" />
-          <path d="M -48 38 L -144 88" />
-          <path d="M 54 -6 L 152 -58" />
-          <path d="M 62 18 L 164 6" />
-          <path d="M 48 38 L 144 88" />
-        </g>
-        <path d="M -22 -44 L 8 -88 L 22 -40" fill="#ff8f4a" opacity="0.95" />
-        <ellipse cx="34" cy="0" rx="68" ry="42" fill="#d14f33" />
-        <ellipse cx="-22" cy="0" rx="86" ry="48" fill="#842828" />
-        <ellipse cx="-54" cy="0" rx="44" ry="28" fill="#53181f" />
-        <path d="M -20 -10 C 8 -30, 42 -34, 72 -16" stroke="#ffb36d" strokeWidth="8" fill="none" opacity="0.9" />
-        <circle cx="-70" cy="-8" r="11" fill="#fff0c4" />
-        <circle cx="-70" cy="-8" r="4" fill="#2a160f" />
-        <rect x="-92" y="-92" width="184" height="12" rx="6" fill="rgba(0, 0, 0, 0.38)" />
-        <rect x="-92" y="-92" width={toFixed(184 * hpRatio)} height="12" rx="6" fill="#ff7044" />
-      </g>
-    );
-  }
-
-  if (bossWave === 3) {
-    const phase = enemy.bossPhase ?? 1;
-    const auraFill = phase >= 3 ? "rgba(255, 64, 93, 0.18)" : phase >= 2 ? "rgba(255, 178, 92, 0.14)" : "rgba(0, 0, 0, 0)";
-
-    return (
-      <g transform={transform}>
-        <ellipse cx="0" cy="28" rx="138" ry="50" fill="rgba(0, 0, 0, 0.28)" />
-        {phase >= 2 ? <ellipse cx="4" cy="16" rx={phase >= 3 ? 164 : 142} ry={phase >= 3 ? 88 : 76} fill={auraFill} /> : null}
-        <g stroke="#291019" strokeWidth="11" strokeLinecap="round">
-          <path d="M -76 6 L -168 -56" />
-          <path d="M -92 34 L -186 8" />
-          <path d="M -76 62 L -162 134" />
-          <path d="M 76 6 L 168 -56" />
-          <path d="M 92 34 L 186 8" />
-          <path d="M 76 62 L 162 134" />
-        </g>
-        <ellipse cx="42" cy="8" rx="82" ry="58" fill="#7d2338" />
-        <ellipse cx="-24" cy="8" rx="102" ry="72" fill="#4a1827" />
-        <ellipse cx="-56" cy="6" rx="54" ry="38" fill="#30131f" />
-        <ellipse cx="24" cy="22" rx="18" ry="24" fill="#d96a52" opacity="0.8" />
-        <ellipse cx="58" cy="18" rx="15" ry="21" fill="#d96a52" opacity="0.72" />
-        <ellipse cx="4" cy="20" rx="14" ry="19" fill="#d96a52" opacity="0.76" />
-        <path d="M -16 -26 C 28 -46, 68 -42, 108 -10" stroke={phase >= 3 ? "#ff6f78" : "#c54c58"} strokeWidth="10" fill="none" />
-        <path d="M -10 42 C 24 58, 56 64, 96 52" stroke="#742537" strokeWidth="8" fill="none" opacity="0.85" />
-        <circle cx="-82" cy="-10" r="12" fill="#ffeab8" />
-        <circle cx="-82" cy="-10" r="4.5" fill="#33160d" />
-        <path d="M -104 -18 C -144 -46, -162 -52, -182 -34" stroke="#8f4151" strokeWidth="7" fill="none" />
-        <path d="M -104 18 C -144 54, -162 60, -182 42" stroke="#8f4151" strokeWidth="7" fill="none" />
-        <rect x="-110" y="-112" width="220" height="14" rx="7" fill="rgba(0, 0, 0, 0.42)" />
-        <rect x="-110" y="-112" width={toFixed(220 * hpRatio)} height="14" rx="7" fill="#df4d66" />
-      </g>
-    );
-  }
+  const asset = getBossSpriteAsset(bossWave);
+  const phase = enemy.bossPhase ?? 1;
+  const auraFill = phase >= 3 ? "rgba(255, 64, 93, 0.18)" : phase >= 2 ? "rgba(255, 178, 92, 0.14)" : "rgba(0, 0, 0, 0)";
 
   return (
     <g transform={transform}>
-      <ellipse cx="0" cy="18" rx="98" ry="40" fill="rgba(0, 0, 0, 0.24)" />
-      <g stroke="#2f1218" strokeWidth="10" strokeLinecap="round">
-        <path d="M -58 8 L -126 -44" />
-        <path d="M -72 26 L -138 0" />
-        <path d="M -58 46 L -126 94" />
-        <path d="M 58 8 L 126 -44" />
-        <path d="M 72 26 L 138 0" />
-        <path d="M 58 46 L 126 94" />
-      </g>
-      <ellipse cx="32" cy="0" rx="62" ry="48" fill="#8f2741" />
-      <ellipse cx="-18" cy="0" rx="76" ry="58" fill="#642131" />
-      <ellipse cx="-40" cy="0" rx="42" ry="32" fill="#47222b" />
-      <circle cx="-62" cy="-10" r="10" fill="#ffe7be" />
-      <circle cx="-62" cy="-10" r="4" fill="#34180c" />
-      <path d="M -90 -12 C -124 -34, -132 -42, -146 -36" stroke="#8d4550" strokeWidth="6" fill="none" />
-      <path d="M -90 14 C -124 40, -132 48, -146 42" stroke="#8d4550" strokeWidth="6" fill="none" />
-      <rect x="-84" y="-94" width="168" height="10" rx="5" fill="rgba(0, 0, 0, 0.35)" />
-      <rect x="-84" y="-94" width={toFixed(168 * hpRatio)} height="10" rx="5" fill="#e74a5a" />
+      <ellipse cx="0" cy={asset.shadowCy} rx={asset.shadowRx} ry={asset.shadowRy} fill="rgba(0, 0, 0, 0.28)" />
+      {bossWave === 3 && phase >= 2 ? <ellipse cx="4" cy="16" rx={phase >= 3 ? 164 : 142} ry={phase >= 3 ? 88 : 76} fill={auraFill} /> : null}
+      <image
+        href={asset.href}
+        x={asset.x}
+        y={asset.y}
+        width={asset.width}
+        height={asset.height}
+        preserveAspectRatio="xMidYMid meet"
+      />
+      {renderBossHealthBar(asset, hpRatio)}
     </g>
   );
 }
@@ -379,9 +407,10 @@ function StatusOverlay({ enemy }: { enemy: EnemyEntity }) {
 
 export default function EnemySprite({ enemy }: { enemy: EnemyEntity }) {
   const angle = (Math.atan2(enemy.vy, enemy.vx) * 180) / Math.PI;
+  const spriteAngle = enemy.type === "boss" ? angle + 180 : angle;
   const pulseScale = 1 + Math.sin(enemy.pulse || 0) * 0.04;
   const hpRatio = clamp(enemy.hp / enemy.maxHp, 0, 1);
-  const transform = `translate(${toFixed(enemy.x)} ${toFixed(enemy.y)}) rotate(${toFixed(angle)}) scale(${toFixed(pulseScale)})`;
+  const transform = `translate(${toFixed(enemy.x)} ${toFixed(enemy.y)}) rotate(${toFixed(spriteAngle)}) scale(${toFixed(pulseScale)})`;
 
   if (enemy.type === "boss") {
     return renderBoss(enemy, hpRatio, transform);
