@@ -1,9 +1,9 @@
 import { DEFAULT_PLAYER_SKIN_ID, EMPTY_META_UPGRADES, PLAYER_SKIN_DEFS, normalizeMetaUpgrades } from "../meta";
-import { getRunDurationForBossWaves } from "../stages";
+import { ENDLESS_BOSS_INTERVAL, getRunDurationForBossWaves } from "../stages";
 import { UPGRADE_DEFS } from "../upgrades";
 import type { DifficultyConfig, DifficultyId, PlayerSkinId, RunSetup, UpgradeId } from "../types";
 
-export const DIFFICULTY_ORDER: DifficultyId[] = ["easy", "normal", "hard"];
+export const DIFFICULTY_ORDER: DifficultyId[] = ["easy", "normal", "hard", "endless"];
 
 export const DIFFICULTY_CONFIGS: Record<DifficultyId, DifficultyConfig> = {
   easy: {
@@ -38,6 +38,18 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyId, DifficultyConfig> = {
     damageMultiplier: 2,
     speedMultiplier: 1.2,
     goldenEggDropChance: 0.002,
+  },
+  endless: {
+    id: "endless",
+    label: "无尽",
+    runDuration: 0,
+    bossWaves: 0,
+    description: `每 ${Math.floor(ENDLESS_BOSS_INTERVAL / 60)} 分钟刷新一波 Boss，敌群和 Boss 会持续变强，直到你倒下或主动结算。`,
+    hpMultiplier: 2,
+    damageMultiplier: 2,
+    speedMultiplier: 1.18,
+    goldenEggDropChance: 0.0025,
+    isEndless: true,
   },
 };
 

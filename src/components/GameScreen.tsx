@@ -17,7 +17,7 @@ import {
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { GITHUB_REPOSITORY_URL } from "../content/links";
 import { RELIC_DEFS } from "../game/relics";
-import { getBossWaveTime } from "../game/stages";
+import { getBossWaveTime, getEndlessBossWaveTime } from "../game/stages";
 import { buildAchievementRunResult, type AchievementRunResult } from "../game/achievements";
 import { GameAudioController, getBgmTrackForState, type AudioSettings } from "../audio/gameAudio";
 import { summarizeUpgrades } from "../game/upgrades";
@@ -317,12 +317,13 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
 
   function fastForwardToNextBossPrep() {
     const state = stateRef.current;
+    const isEndless = state.difficulty.isEndless === true;
 
-    if (state.runState !== "running" || state.bossSpawned || state.bossWavesSpawned >= state.difficulty.bossWaves) {
+    if (state.runState !== "running" || state.bossSpawned || (!isEndless && state.bossWavesSpawned >= state.difficulty.bossWaves)) {
       return false;
     }
 
-    const nextBossTime = getBossWaveTime(state.bossWavesSpawned + 1);
+    const nextBossTime = isEndless ? getEndlessBossWaveTime(state.bossWavesSpawned + 1) : getBossWaveTime(state.bossWavesSpawned + 1);
     const targetTime = Math.max(0, nextBossTime - 5);
 
     if (state.timer >= targetTime) {
@@ -660,10 +661,11 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
   const summary = summarizeUpgrades(state);
   const xpRatio = clamp(state.xp / state.xpToNext, 0, 1);
   const xpRemaining = Math.max(0, state.xpToNext - state.xp);
-  const nextBossTime = getBossWaveTime(state.bossWavesSpawned + 1);
+  const isEndless = state.difficulty.isEndless === true;
+  const nextBossTime = isEndless ? getEndlessBossWaveTime(state.bossWavesSpawned + 1) : getBossWaveTime(state.bossWavesSpawned + 1);
   const fastForwardTarget = Math.max(0, nextBossTime - 5);
-  const canFastForward = state.runState === "running" && !state.bossSpawned && state.bossWavesSpawned < state.difficulty.bossWaves && state.timer < fastForwardTarget;
-  const targetText = `存活 ${formatTime(state.runDuration)} 并击败 ${state.difficulty.bossWaves} 波 Boss`;
+  const canFastForward = state.runState === "running" && !state.bossSpawned && (isEndless || state.bossWavesSpawned < state.difficulty.bossWaves) && state.timer < fastForwardTarget;
+  const targetText = isEndless ? "无尽模式：每 2:00 击退一波 Boss" : `存活 ${formatTime(state.runDuration)} 并击败 ${state.difficulty.bossWaves} 波 Boss`;
   const phaseText = getPhaseLabel(state);
   const scoreText = (state.sessionStats.score ?? 0).toLocaleString();
   const bossTitle = boss ? `${boss.name} 第 ${boss.bossWave ?? state.bossWavesSpawned} 波` : "";

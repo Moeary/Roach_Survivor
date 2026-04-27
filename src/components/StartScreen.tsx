@@ -51,6 +51,9 @@ export default function StartScreen({
 }: StartScreenProps) {
   const difficulty = getDifficultyConfig(difficultyId);
   const selectedSkin = getPlayerSkinDefinition(selectedSkinId);
+  const goalText = difficulty.isEndless
+    ? "每 2:00 刷新一波 Boss，尽量活得更久"
+    : `存活 ${Math.floor(difficulty.runDuration / 60)}:${String(difficulty.runDuration % 60).padStart(2, "0")} 并击败 ${difficulty.bossWaves} 波 Boss`;
 
   return (
     <main className="menu-screen">
@@ -164,9 +167,7 @@ export default function StartScreen({
         <section className="menu-footnote menu-footnote-inline">
           <div>
             <span>目标</span>
-            <strong>
-              存活 {Math.floor(difficulty.runDuration / 60)}:{String(difficulty.runDuration % 60).padStart(2, "0")} 并击败 {difficulty.bossWaves} 波 Boss
-            </strong>
+            <strong>{goalText}</strong>
           </div>
           <div>
             <span>当前版本</span>

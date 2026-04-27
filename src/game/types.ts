@@ -1,5 +1,5 @@
 export type RunState = "running" | "paused" | "levelup" | "relicChoice" | "won" | "lost" | "settled";
-export type DifficultyId = "easy" | "normal" | "hard";
+export type DifficultyId = "easy" | "normal" | "hard" | "endless";
 export type EnemyTypeId =
   | "nymph"
   | "adult"
@@ -339,6 +339,7 @@ export interface DifficultyConfig {
   damageMultiplier: number;
   speedMultiplier: number;
   goldenEggDropChance: number;
+  isEndless?: boolean;
 }
 
 export interface MetaUpgradeLevels {

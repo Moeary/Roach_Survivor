@@ -4,7 +4,7 @@ import { AUTO_REGEN_INTERVAL_SECONDS } from "./meta";
 import { createPlayer } from "./entities/player";
 import { getRelicDef, pickRelicChoices, RELIC_MILESTONE_INTERVAL } from "./relics";
 import { getDifficultyConfig, normalizeRunSetup } from "./run/config";
-import { getBossWaveTime, STAGE_THREE_START_TIME, STAGE_TWO_START_TIME } from "./stages";
+import { getBossWaveTime, getEndlessBossWaveTime, STAGE_THREE_START_TIME, STAGE_TWO_START_TIME } from "./stages";
 import type {
   DecorationType,
   DifficultyId,
@@ -39,6 +39,7 @@ const SHALLOW_WATER_SLOW_MULTIPLIER = 0.68;
 const XP_PICKUP_LIFETIME_SECONDS = 60;
 const BOSS_DASH_MIN_DISTANCE = 640;
 const BOSS_DASH_MAX_DISTANCE = 1320;
+const ENDLESS_DIFFICULTY_RAMP_SECONDS = 120;
 
 export type BossWaveConfig = {
   name: string;
@@ -166,6 +167,7 @@ const SCORE_DIFFICULTY_MULTIPLIER: Record<DifficultyId, number> = {
   easy: 1,
   normal: 1.5,
   hard: 2,
+  endless: 2.4,
 };
 
 const ENEMY_SCORE_VALUES: Record<EnemyTypeId, number> = {
@@ -222,8 +224,44 @@ function getBossWaveConfig(bossWave: number): BossWaveConfig {
   return BOSS_WAVE_CONFIGS[bossWave] ?? BOSS_WAVE_CONFIGS[1]!;
 }
 
+function isEndlessRun(state: GameState): boolean {
+  return state.difficulty.isEndless === true;
+}
+
+function getBossTemplateWave(state: GameState, bossWave: number): number {
+  if (!isEndlessRun(state)) {
+    return bossWave;
+  }
+
+  return ((Math.max(1, bossWave) - 1) % 3) + 1;
+}
+
+function getNextBossWaveTime(state: GameState): number {
+  const nextWave = state.bossWavesSpawned + 1;
+  return isEndlessRun(state) ? getEndlessBossWaveTime(nextWave) : getBossWaveTime(nextWave);
+}
+
+function getCurrentBossWaveTime(state: GameState): number {
+  return isEndlessRun(state) ? getEndlessBossWaveTime(state.bossWavesSpawned) : getBossWaveTime(state.bossWavesSpawned);
+}
+
+function getEndlessScaling(state: GameState, bossWave = state.bossWavesSpawned): { hp: number; damage: number; speed: number } {
+  if (!isEndlessRun(state)) {
+    return { hp: 1, damage: 1, speed: 1 };
+  }
+
+  const ramp = Math.max(0, state.timer / ENDLESS_DIFFICULTY_RAMP_SECONDS);
+  const waveRamp = Math.max(0, bossWave - 1);
+
+  return {
+    hp: 1 + ramp * 0.18 + waveRamp * 0.16,
+    damage: 1 + ramp * 0.1 + waveRamp * 0.09,
+    speed: 1 + Math.min(0.7, ramp * 0.035 + waveRamp * 0.025),
+  };
+}
+
 function getSpawnDistanceRange(state: GameState): { minDistance: number; maxDistance: number } {
-  const progress = Math.min(1, state.timer / Math.max(1, state.runDuration));
+  const progress = isEndlessRun(state) ? Math.min(1, state.timer / 600) : Math.min(1, state.timer / Math.max(1, state.runDuration));
   const minDistance = 720 + progress * 140;
   return {
     minDistance,
@@ -561,7 +599,15 @@ export function createGameState(setup?: RunSetup): GameState {
 
 export function getPhaseLabel(state: GameState): string {
   if (state.bossSpawned && !state.bossDefeated) {
+    if (isEndlessRun(state)) {
+      return `无尽第 ${state.bossWavesSpawned} 波 Boss 战`;
+    }
+
     return `第 ${state.bossWavesSpawned} 阶段 Boss 战`;
+  }
+
+  if (isEndlessRun(state)) {
+    return `无尽第 ${Math.max(1, state.bossWavesSpawned + 1)} 轮`;
   }
 
   if (state.timer < STAGE_TWO_START_TIME || state.difficulty.bossWaves <= 1) {
@@ -601,6 +647,10 @@ export function getStatusLabel(state: GameState): string {
   }
 
   if (state.bossSpawned && !state.bossDefeated) {
+    if (isEndlessRun(state)) {
+      return `Boss 战 ${state.bossWavesSpawned}`;
+    }
+
     return `Boss 战 ${state.bossWavesSpawned}/${state.difficulty.bossWaves}`;
   }
 
@@ -730,6 +780,10 @@ function dropXpOrbs(state: GameState, x: number, y: number, totalXp: number): vo
 }
 
 function getBossGoldenEggReward(state: GameState, bossWave: number): number {
+  if (isEndlessRun(state)) {
+    return Math.min(40, 8 + bossWave * 3);
+  }
+
   if (bossWave === 1) {
     return state.difficulty.id === "easy" ? 5 : state.difficulty.id === "normal" ? 7 : 9;
   }
@@ -900,7 +954,7 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity, cause: EnemyDefeatCau
 
   if (enemy.type === "boss") {
     if (enemy.bossRole === "summon") {
-      const rewardXp = enemy.xp > 0 ? enemy.xp : (getBossWaveConfig(enemy.bossWave ?? 1).supportXpReward ?? 12);
+      const rewardXp = enemy.xp > 0 ? enemy.xp : (getBossWaveConfig(getBossTemplateWave(state, enemy.bossWave ?? 1)).supportXpReward ?? 12);
       dropXpOrbs(state, enemy.x, enemy.y, rewardXp);
       return;
     }
@@ -909,7 +963,7 @@ function defeatEnemy(state: GameState, enemy: EnemyEntity, cause: EnemyDefeatCau
     state.bossWavesDefeated += 1;
     const reward = getBossGoldenEggReward(state, state.bossWavesDefeated);
 
-    if (state.bossWavesDefeated >= state.difficulty.bossWaves) {
+    if (!isEndlessRun(state) && state.bossWavesDefeated >= state.difficulty.bossWaves) {
       collectGoldenEggs(state, reward, enemy.x, enemy.y);
       state.bossDefeated = true;
       state.runState = "won";
@@ -1024,9 +1078,10 @@ function findSpawnPosition(state: GameState, radius: number, minDistance?: numbe
 function spawnEnemy(state: GameState, enemyTypeId: EnemyTypeId, position?: { x: number; y: number }): EnemyEntity {
   const template = ENEMY_TYPES[enemyTypeId];
   const spawnPoint = position ?? findSpawnPosition(state, template.radius);
-  const hp = Math.max(1, Math.round(template.hp * state.difficulty.hpMultiplier));
-  const damage = Math.max(1, Math.round(template.damage * state.difficulty.damageMultiplier));
-  const speed = template.speed * state.difficulty.speedMultiplier;
+  const endlessScaling = getEndlessScaling(state);
+  const hp = Math.max(1, Math.round(template.hp * state.difficulty.hpMultiplier * endlessScaling.hp));
+  const damage = Math.max(1, Math.round(template.damage * state.difficulty.damageMultiplier * endlessScaling.damage));
+  const speed = template.speed * state.difficulty.speedMultiplier * endlessScaling.speed;
   const enemy: EnemyEntity = {
     id: "enemy-" + state.nextEnemyId,
     type: template.id,
@@ -1074,16 +1129,18 @@ function spawnEnemy(state: GameState, enemyTypeId: EnemyTypeId, position?: { x: 
 }
 
 function applyBossWaveConfig(state: GameState, boss: EnemyEntity, bossWave: number): void {
-  const config = getBossWaveConfig(bossWave);
+  const templateWave = getBossTemplateWave(state, bossWave);
+  const config = getBossWaveConfig(templateWave);
+  const endlessScaling = getEndlessScaling(state, bossWave);
 
-  boss.name = config.name;
+  boss.name = isEndlessRun(state) ? `${config.name}·无尽 ${bossWave}` : config.name;
   boss.bossWave = bossWave;
-  boss.maxHp = resolveDifficultyValue(config.hp, state.difficulty.id);
+  boss.maxHp = Math.max(1, Math.round(resolveDifficultyValue(config.hp, state.difficulty.id) * endlessScaling.hp));
   boss.hp = boss.maxHp;
-  boss.damage = resolveDifficultyValue(config.damage, state.difficulty.id);
-  boss.speed = resolveDifficultyValue(config.speed, state.difficulty.id);
+  boss.damage = Math.max(1, Math.round(resolveDifficultyValue(config.damage, state.difficulty.id) * endlessScaling.damage));
+  boss.speed = Number((resolveDifficultyValue(config.speed, state.difficulty.id) * endlessScaling.speed).toFixed(1));
   boss.xp = config.supportXpReward ?? 0;
-  boss.radius = config.radius;
+  boss.radius = config.radius + (isEndlessRun(state) ? Math.min(18, Math.floor((bossWave - 1) / 2) * 2) : 0);
   boss.summonCooldown = config.summonCooldown;
   boss.summonTimer = config.summonCooldown;
   boss.summonBurst = config.summonBurst;
@@ -1326,7 +1383,7 @@ function castBossAcidNova(state: GameState, boss: EnemyEntity): void {
 
 function updateBossAction(state: GameState, boss: EnemyEntity, dt: number): boolean {
   const bossWave = boss.bossWave ?? 1;
-  const config = getBossWaveConfig(bossWave);
+  const config = getBossWaveConfig(getBossTemplateWave(state, bossWave));
 
   if (boss.bossAction === "teleport-windup") {
     return updateBossTeleport(state, boss, dt, config);
@@ -1430,10 +1487,10 @@ function summonBossMinions(state: GameState, boss: EnemyEntity): void {
   }
 
   let remainingSummons = summonCount;
-  const bossConfig = getBossWaveConfig(boss.bossWave ?? 1);
+  const bossConfig = getBossWaveConfig(getBossTemplateWave(state, boss.bossWave ?? 1));
   let didSummon = false;
 
-  if (boss.bossWave === 3 && remainingSummons > 0 && Math.random() < (bossConfig.summonBossChance ?? 0)) {
+  if (getBossTemplateWave(state, boss.bossWave ?? 1) === 3 && remainingSummons > 0 && Math.random() < (bossConfig.summonBossChance ?? 0)) {
     if (spawnSummonedSupportBoss(state, boss)) {
       remainingSummons -= 1;
       didSummon = true;
@@ -1480,12 +1537,12 @@ function summonBossMinions(state: GameState, boss: EnemyEntity): void {
 
 
 function spawnBoss(state: GameState): void {
-  if (state.bossSpawned || state.bossWavesSpawned >= state.difficulty.bossWaves) {
+  if (state.bossSpawned || (!isEndlessRun(state) && state.bossWavesSpawned >= state.difficulty.bossWaves)) {
     return;
   }
 
   const bossWave = state.bossWavesSpawned + 1;
-  const bossConfig = getBossWaveConfig(bossWave);
+  const bossConfig = getBossWaveConfig(getBossTemplateWave(state, bossWave));
   state.bossSpawned = true;
   const position = findSpawnPosition(state, bossConfig.radius, 720, 860);
   const boss = spawnEnemy(state, "boss", position);
@@ -1507,20 +1564,26 @@ function updateSpawning(state: GameState, dt: number): void {
   }
 
   state.spawnTimer -= dt;
-  const enemyCap = Math.min(96, 18 + Math.floor(state.timer / 18) * 3);
+  const enemyCap = isEndlessRun(state)
+    ? Math.min(160, 24 + Math.floor(state.timer / 16) * 4)
+    : Math.min(96, 18 + Math.floor(state.timer / 18) * 3);
   const livingEnemies = state.enemies.reduce((count, enemy) => count + (enemy.alive ? 1 : 0), 0);
 
   if (livingEnemies >= enemyCap || state.spawnTimer > 0) {
     return;
   }
 
-  const waveSize = Math.min(5, 1 + Math.floor(state.timer / 65));
+  const waveSize = isEndlessRun(state)
+    ? Math.min(9, 2 + Math.floor(state.timer / 72))
+    : Math.min(5, 1 + Math.floor(state.timer / 65));
 
   for (let index = 0; index < waveSize; index += 1) {
     spawnEnemy(state, pickEnemyTypeForTime(state.timer));
   }
 
-  state.spawnTimer = Math.max(0.34, 1.28 - state.timer * 0.0022);
+  state.spawnTimer = isEndlessRun(state)
+    ? Math.max(0.24, 1.08 - state.timer * 0.0018)
+    : Math.max(0.34, 1.28 - state.timer * 0.0022);
 }
 
 function updatePlayerMovement(state: GameState, input: InputState, dt: number): void {
@@ -2486,10 +2549,13 @@ export function updateGame(state: GameState, input: InputState, deltaSeconds: nu
   }
 
   const dt = Math.min(0.05, deltaSeconds);
-  const currentBossTime = getBossWaveTime(state.bossWavesSpawned);
-  const nextBossTime = getBossWaveTime(state.bossWavesSpawned + 1);
+  const endless = isEndlessRun(state);
+  const currentBossTime = getCurrentBossWaveTime(state);
+  const nextBossTime = getNextBossWaveTime(state);
 
-  if (state.bossSpawned) {
+  if (endless) {
+    state.timer += dt;
+  } else if (state.bossSpawned) {
     state.timer = Math.min(state.runDuration, currentBossTime);
   } else {
     state.timer = Math.min(state.runDuration, state.timer + dt);

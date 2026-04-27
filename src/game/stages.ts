@@ -1,6 +1,7 @@
 export const STAGE_ONE_DURATION = 240;
 export const STAGE_TWO_DURATION = 180;
 export const STAGE_THREE_DURATION = 180;
+export const ENDLESS_BOSS_INTERVAL = 120;
 
 export const STAGE_TWO_START_TIME = STAGE_ONE_DURATION;
 export const STAGE_THREE_START_TIME = STAGE_ONE_DURATION + STAGE_TWO_DURATION;
@@ -18,6 +19,14 @@ export function getBossWaveTime(waveNumber: number): number {
   }
 
   return BOSS_WAVE_TIMINGS[waveNumber] ?? FINAL_BOSS_TIME;
+}
+
+export function getEndlessBossWaveTime(waveNumber: number): number {
+  if (waveNumber <= 0) {
+    return 0;
+  }
+
+  return waveNumber * ENDLESS_BOSS_INTERVAL;
 }
 
 export function getRunDurationForBossWaves(bossWaves: number): number {
