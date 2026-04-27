@@ -22,6 +22,7 @@ export interface AchievementRunResult {
   bossWavesDefeated: number;
   damageTaken: number;
   kills: number;
+  score: number;
   peakLevel: number;
   projectilesFired: number;
   runGoldenEggsCollected: number;
@@ -217,6 +218,7 @@ export function buildAchievementRunResult(state: GameState, setup: RunSetup): Ac
     bossWavesDefeated: state.sessionStats.bossesDefeated,
     damageTaken: state.sessionStats.damageTaken,
     kills: state.sessionStats.kills,
+    score: state.sessionStats.score ?? 0,
     peakLevel: state.sessionStats.peakLevel,
     projectilesFired: state.sessionStats.projectilesFired,
     runGoldenEggsCollected: state.runGoldenEggsCollected,

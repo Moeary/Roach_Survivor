@@ -217,7 +217,7 @@ select {
 
 .difficulty-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -246,6 +246,18 @@ select {
   font-weight: 800;
   border-color: rgba(214, 239, 109, 0.24);
   background: linear-gradient(135deg, #d7f06d, #ffcb6d);
+}
+
+@media (min-width: 721px) {
+  .difficulty-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .difficulty-pill {
+    min-height: 54px;
+    padding: 12px 18px;
+    white-space: nowrap;
+  }
 }
 
 .hero-logo-stage {
@@ -1377,6 +1389,7 @@ select {
 .hud-top {
   top: 0;
   align-items: flex-start;
+  justify-content: flex-start;
 }
 
 .hud-bottom {
@@ -1554,6 +1567,8 @@ select {
 }
 
 .choice-card {
+  display: flex;
+  flex-direction: column;
   padding: 18px;
   border: 1px solid rgba(214, 239, 109, 0.18);
   border-radius: 24px;
@@ -1609,19 +1624,29 @@ select {
 
 .choice-card-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 72px;
   margin-bottom: 12px;
 }
 
 .choice-icon {
-  width: 58px;
-  height: 58px;
+  width: 66px;
+  height: 66px;
+  flex: 0 0 66px;
+  align-self: center;
 }
 
 .choice-card-top .choice-hotkey {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
   margin-bottom: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  border: 2px solid rgba(16, 21, 15, 0.3);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
 }
 
 .relic-codex-grid {
@@ -1691,22 +1716,24 @@ select {
 }
 
 .hud-objective {
-  width: min(430px, calc(100vw - 40px));
-  padding: 14px 16px;
-  border: 2px solid rgba(0, 0, 0, 0.72);
+  width: fit-content;
+  max-width: min(340px, calc(100vw - 40px));
+  padding: 9px 12px;
+  border: 1px solid rgba(244, 241, 220, 0.08);
   border-radius: 6px;
   color: #f4f1dc;
   background:
-    linear-gradient(180deg, rgba(33, 38, 31, 0.92), rgba(12, 15, 13, 0.94)),
-    rgba(12, 15, 13, 0.94);
+    linear-gradient(180deg, rgba(33, 38, 31, 0.22), rgba(12, 15, 13, 0.14)),
+    rgba(12, 15, 13, 0.12);
   box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.08),
-    0 18px 36px rgba(0, 0, 0, 0.42);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035),
+    0 10px 22px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(2px);
 }
 
 .hud-objective-trigger {
   display: block;
-  margin: 0 0 6px;
+  margin: 0 0 5px;
   padding: 0;
   border: 0;
   color: #d7f06d;
@@ -1731,23 +1758,26 @@ select {
 
 .hud-objective strong {
   display: block;
-  font-size: 1rem;
-  line-height: 1.36;
+  max-width: 100%;
+  font-size: 0.9rem;
+  line-height: 1.24;
+  white-space: normal;
 }
 
-.hud-objective-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  margin-top: 10px;
+.hud-objective-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  gap: 4px 14px;
+  margin-top: 7px;
 }
 
-.hud-objective-row span {
+.hud-objective-list span {
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.76rem;
+  white-space: nowrap;
 }
 
-.hud-objective-row b {
+.hud-objective-list b {
   color: #f4f1dc;
   font-variant-numeric: tabular-nums;
 }
@@ -1847,14 +1877,15 @@ select {
   max-width: 100%;
   padding: 8px;
   overflow-x: auto;
-  border: 3px solid rgba(0, 0, 0, 0.82);
+  border: 3px solid rgba(0, 0, 0, 0.48);
   border-radius: 6px;
   background:
-    linear-gradient(180deg, rgba(61, 62, 57, 0.94), rgba(34, 35, 32, 0.96)),
-    #30312d;
+    linear-gradient(180deg, rgba(61, 62, 57, 0.48), rgba(34, 35, 32, 0.36)),
+    rgba(48, 49, 45, 0.28);
   box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
-    0 20px 36px rgba(0, 0, 0, 0.42);
+    inset 0 0 0 2px rgba(255, 255, 255, 0.08),
+    0 20px 36px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(4px);
 }
 
 .inventory-section {
@@ -1878,6 +1909,7 @@ select {
   flex: 0 0 58px;
   width: 58px;
   height: 58px;
+  box-sizing: border-box;
   border: 2px solid rgba(12, 13, 12, 0.92);
   border-radius: 4px;
   background:
@@ -1917,6 +1949,8 @@ select {
 .inventory-icon {
   width: 46px;
   height: 46px;
+  align-self: center;
+  justify-self: center;
 }
 
 .inventory-slot-label {
@@ -2426,12 +2460,12 @@ select {
     line-height: 1.25;
   }
 
-  .game-screen-mobile-controls .hud-objective-row {
+  .game-screen-mobile-controls .hud-objective-list {
     gap: 4px 10px;
     margin-top: 6px;
   }
 
-  .game-screen-mobile-controls .hud-objective-row span {
+  .game-screen-mobile-controls .hud-objective-list span {
     font-size: 0.72rem;
   }
 

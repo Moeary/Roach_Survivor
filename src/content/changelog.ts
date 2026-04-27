@@ -7,6 +7,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "v1.1.0 Endless Sewer Update",
+    date: "2026-04-27",
+    summary: "根据试玩反馈重做局内可读性，加入分数结算与无尽难度，为后续无尽模式继续扩展打底。",
+    items: [
+      "新增无尽难度，放在困难右侧；每 2 分钟刷新一波 Boss，敌群和 Boss 会随时间持续增强。",
+      "暂停菜单的返回主菜单改为结算本局，并在局内 HUD 与结算页显示本局分数；不同敌人与不同难度会给出不同分值。",
+      "战斗场景重做为更明确的下水道风格，加入深水区、浅水区、易拉罐、烟头和污物障碍，障碍与水坑分别带红色/蓝色提示框。",
+      "主武器子弹改为黑红卵鞘，隐藏主角旁边的透明环绕子弹，只保留瞄准辅助线。",
+      "优化左上角局内信息、底部技能栏、圣遗物/技能图标对齐，并让经验球 60 秒后自动消失以降低后期压力。",
+    ],
+  },
+  {
     version: "v1.0 Mobile Release & Final Polish",
     date: "2026-04-26",
     summary: "正式版收口：补齐手机端首屏与局内触控兼容，换用 localStorage 存档，并整理桌面端与容器化发布资源。",
