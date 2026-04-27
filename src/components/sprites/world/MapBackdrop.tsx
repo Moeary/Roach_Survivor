@@ -19,10 +19,13 @@ export default function MapBackdrop({
   const bottom = top + map.height;
   const laneSpacing = 220;
   const gutterSpacing = 340;
+  const brickSpacing = 110;
   const laneStart = Math.floor(top / laneSpacing) - 2;
   const laneCount = Math.ceil(map.height / laneSpacing) + 4;
   const gutterStart = Math.floor(left / gutterSpacing) - 2;
   const gutterCount = Math.ceil(map.width / gutterSpacing) + 4;
+  const brickStart = Math.floor(left / brickSpacing) - 2;
+  const brickCount = Math.ceil(map.width / brickSpacing) + 4;
 
   const laneMarkup = Array.from({ length: laneCount }, (_, index) => {
     const row = laneStart + index;
@@ -31,8 +34,8 @@ export default function MapBackdrop({
       <path
         key={"lane-" + row}
         d={`M ${left - 220} ${y} C ${left + map.width * 0.24} ${y + 28}, ${left + map.width * 0.62} ${y - 42}, ${right + 220} ${y + 20}`}
-        stroke="rgba(164, 190, 110, 0.07)"
-        strokeWidth="18"
+        stroke="rgba(96, 129, 119, 0.14)"
+        strokeWidth="16"
         fill="none"
       />
     );
@@ -45,9 +48,23 @@ export default function MapBackdrop({
       <path
         key={"gutter-" + column}
         d={`M ${x} ${top - 180} C ${x + 18} ${top + map.height * 0.3}, ${x - 22} ${top + map.height * 0.66}, ${x + 14} ${bottom + 180}`}
-        stroke="rgba(255, 160, 79, 0.06)"
-        strokeWidth="24"
+        stroke="rgba(123, 88, 55, 0.15)"
+        strokeWidth="18"
         fill="none"
+      />
+    );
+  });
+
+  const brickMarkup = Array.from({ length: brickCount }, (_, index) => {
+    const column = brickStart + index;
+    const x = column * brickSpacing + (Math.abs(column) % 2) * 42;
+    return (
+      <path
+        key={"brick-" + column}
+        d={`M ${x} ${top - 120} V ${bottom + 120}`}
+        stroke="rgba(184, 164, 132, 0.045)"
+        strokeWidth="3"
+        strokeDasharray="44 34"
       />
     );
   });
@@ -55,16 +72,20 @@ export default function MapBackdrop({
   return (
     <>
       <rect x={left} y={top} width={map.width} height={map.height} fill="url(#floorGradient)" />
-      <rect x={left} y={top} width={map.width} height={map.height} fill="url(#sewerGrid)" opacity="0.86" />
-      <rect x={left} y={top} width={map.width} height={map.height} fill="url(#sewerScratches)" opacity="0.2" />
+      <rect x={left} y={top} width={map.width} height={map.height} fill="url(#sewerBrick)" opacity="0.64" />
+      <rect x={left} y={top} width={map.width} height={map.height} fill="url(#sewerGrid)" opacity="0.74" />
+      <rect x={left} y={top} width={map.width} height={map.height} fill="url(#sewerScratches)" opacity="0.18" />
+      {brickMarkup}
       {laneMarkup}
       {gutterMarkup}
       {decorations.map((prop) => {
-        if (prop.type === "puddle") {
+        if (prop.type === "shallowWater" || prop.type === "puddle") {
           return (
             <g key={prop.id} transform={`translate(${toFixed(prop.x)} ${toFixed(prop.y)}) rotate(${toFixed(prop.rotation)}) scale(${toFixed(prop.scale)})`}>
-              <ellipse rx="54" ry="30" fill="rgba(113, 210, 87, 0.12)" />
-              <ellipse rx="34" ry="18" fill="rgba(214, 239, 109, 0.08)" />
+              <ellipse rx="78" ry="40" fill="rgba(39, 117, 116, 0.32)" stroke="rgba(133, 188, 175, 0.18)" strokeWidth="4" />
+              <ellipse rx="86" ry="47" fill="none" stroke="rgba(95, 206, 255, 0.74)" strokeWidth="4" strokeDasharray="14 10" />
+              <ellipse rx="52" ry="22" fill="rgba(118, 169, 139, 0.16)" />
+              <path d="M -54 -4 C -24 -18, 20 -14, 52 2 M -38 15 C -8 4, 26 10, 42 20" stroke="rgba(206, 220, 170, 0.24)" strokeWidth="4" strokeLinecap="round" fill="none" />
             </g>
           );
         }
@@ -72,8 +93,8 @@ export default function MapBackdrop({
         if (prop.type === "crumb") {
           return (
             <g key={prop.id} transform={`translate(${toFixed(prop.x)} ${toFixed(prop.y)}) rotate(${toFixed(prop.rotation)}) scale(${toFixed(prop.scale)})`}>
-              <polygon points="-18,-10 14,-16 22,4 -2,18 -24,2" fill="#8e6d3f" />
-              <polygon points="-6,-2 8,-6 10,2 -2,8" fill="#c7a26a" />
+              <polygon points="-20,-8 14,-15 25,2 4,17 -26,6" fill="#826542" />
+              <polygon points="-8,-1 9,-7 12,3 -1,9" fill="#caa66d" opacity="0.72" />
             </g>
           );
         }
@@ -99,8 +120,8 @@ export default function MapBackdrop({
 
         return (
           <g key={prop.id} transform={`translate(${toFixed(prop.x)} ${toFixed(prop.y)}) rotate(${toFixed(prop.rotation)}) scale(${toFixed(prop.scale)})`}>
-            <ellipse rx="46" ry="20" fill="rgba(74, 43, 24, 0.22)" />
-            <ellipse rx="26" ry="10" fill="rgba(118, 83, 56, 0.18)" />
+            <ellipse rx="52" ry="22" fill="rgba(91, 48, 27, 0.3)" />
+            <ellipse rx="28" ry="10" fill="rgba(154, 101, 63, 0.2)" />
           </g>
         );
       })}

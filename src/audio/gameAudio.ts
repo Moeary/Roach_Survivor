@@ -264,7 +264,7 @@ export function getBgmTrackForState(state: GameState): BgmTrackId | null {
     return "victory";
   }
 
-  if (state.runState === "lost") {
+  if (state.runState === "lost" || state.runState === "settled") {
     return null;
   }
 

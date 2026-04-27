@@ -8,6 +8,7 @@ import {
   formatTime,
   getBoss,
   getCamera,
+  getPhaseLabel,
   refreshUpgradeChoices,
   resetInputState,
   togglePause,
@@ -221,6 +222,10 @@ function HealthHearts({ current, max }: { current: number; max: number }) {
   );
 }
 
+function isTerminalRunState(runState: GameState["runState"]): boolean {
+  return runState === "won" || runState === "lost" || runState === "settled";
+}
+
 export default function GameScreen({ audioSettings, onAwardGoldenEggs, onCompleteRun, onReturnToMenu, setup }: GameScreenProps) {
   const stateRef = useRef<GameState>(createGameState(setup));
   const inputRef = useRef<InputState>(createInputState());
@@ -246,6 +251,15 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
 
   function refresh() {
     forceRender((value) => value + 1);
+  }
+
+  function reportRunCompletion() {
+    const state = stateRef.current;
+
+    if (!completionReportedRef.current && isTerminalRunState(state.runState)) {
+      completionReportedRef.current = true;
+      completeRunRef.current(buildAchievementRunResult(state, setup));
+    }
   }
 
   function restartRun() {
@@ -321,6 +335,19 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
     state.timer = targetTime;
     refresh();
     return true;
+  }
+
+  function settleCurrentRun() {
+    const state = stateRef.current;
+
+    if (state.runState !== "paused") {
+      return;
+    }
+
+    state.runState = "settled";
+    resetInputState(inputRef.current);
+    reportRunCompletion();
+    refresh();
   }
 
   function updatePointerPosition(clientX: number, clientY: number) {
@@ -563,7 +590,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
         }
       }
 
-      if ((state.runState === "won" || state.runState === "lost") && !event.repeat && code === "Enter") {
+      if (isTerminalRunState(state.runState) && !event.repeat && code === "Enter") {
         event.preventDefault();
         restartRun();
         return;
@@ -598,10 +625,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
         }
       });
 
-      if (!completionReportedRef.current && (stateRef.current.runState === "won" || stateRef.current.runState === "lost")) {
-        completionReportedRef.current = true;
-        completeRunRef.current(buildAchievementRunResult(stateRef.current, setup));
-      }
+      reportRunCompletion();
 
       refresh();
       frameRef.current = window.requestAnimationFrame(frame);
@@ -640,6 +664,8 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
   const fastForwardTarget = Math.max(0, nextBossTime - 5);
   const canFastForward = state.runState === "running" && !state.bossSpawned && state.bossWavesSpawned < state.difficulty.bossWaves && state.timer < fastForwardTarget;
   const targetText = `存活 ${formatTime(state.runDuration)} 并击败 ${state.difficulty.bossWaves} 波 Boss`;
+  const phaseText = getPhaseLabel(state);
+  const scoreText = (state.sessionStats.score ?? 0).toLocaleString();
   const bossTitle = boss ? `${boss.name} 第 ${boss.bossWave ?? state.bossWavesSpawned} 波` : "";
   const relicInventory = state.relics
     .map((relicId) => RELIC_DEFS.find((relic) => relic.id === relicId))
@@ -727,9 +753,11 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
             局内目标
           </button>
           <strong>{targetText}</strong>
-          <div className="hud-objective-row">
-            <span>当前时间 <b>{formatTime(state.timer)}</b></span>
-            <span>还剩敌人 <b>{state.enemies.length}</b></span>
+          <div className="hud-objective-list">
+            <span>存活时间 <b>{formatTime(state.timer)}</b></span>
+            <span>当前阶段 <b>{phaseText}</b></span>
+            <span>本局分数 <b>{scoreText}</b></span>
+            <span>当前敌人 <b>{state.enemies.length}</b></span>
           </div>
         </section>
       </div>
@@ -885,7 +913,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
               <>
                 <p className="menu-eyebrow">PAUSED</p>
                 <h2>下水道短暂停摆</h2>
-                <p className="overlay-copy">准备好了就继续突围，或者返回主菜单看看教程。</p>
+                <p className="overlay-copy">准备好了就继续突围，或者结束并结算当前这局。</p>
                 <div className="modal-actions">
                   <button className="button-primary" type="button" onClick={() => { togglePause(stateRef.current); refresh(); }}>
                     继续战斗
@@ -893,8 +921,8 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
                   <button className="button-secondary" type="button" onClick={restartRun}>
                     重新开局
                   </button>
-                  <button className="button-secondary" type="button" onClick={onReturnToMenu}>
-                    返回主菜单
+                  <button className="button-secondary" type="button" onClick={settleCurrentRun}>
+                    退回主界面并结算本局
                   </button>
                 </div>
               </>
@@ -906,6 +934,7 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
                 <h2>整片母巢被你轰穿了</h2>
                 <p className="overlay-copy">你撑过了 {formatTime(state.runDuration)}，并清掉了 {state.difficulty.bossWaves} 波 Boss，整个污水区都被你打成了空壳。</p>
                 <div className="stats-grid">
+                  <div className="stats-item"><span>本局分数</span><strong>{scoreText}</strong></div>
                   <div className="stats-item"><span>存活时间</span><strong>{formatTime(state.timer)}</strong></div>
                   <div className="stats-item"><span>击杀总数</span><strong>{state.sessionStats.kills}</strong></div>
                   <div className="stats-item"><span>Boss 击败</span><strong>{state.sessionStats.bossesDefeated}</strong></div>
@@ -928,12 +957,42 @@ export default function GameScreen({ audioSettings, onAwardGoldenEggs, onComplet
               </>
             ) : null}
 
+            {state.runState === "settled" ? (
+              <>
+                <p className="menu-eyebrow">RUN SETTLED</p>
+                <h2>本局结算完成</h2>
+                <p className="overlay-copy">勇敢的蟑螂哦,这次已经推进到 {phaseText}</p>
+                <div className="stats-grid">
+                  <div className="stats-item"><span>本局分数</span><strong>{scoreText}</strong></div>
+                  <div className="stats-item"><span>存活时间</span><strong>{formatTime(state.timer)}</strong></div>
+                  <div className="stats-item"><span>击杀总数</span><strong>{state.sessionStats.kills}</strong></div>
+                  <div className="stats-item"><span>Boss 击败</span><strong>{state.sessionStats.bossesDefeated}</strong></div>
+                  <div className="stats-item"><span>最高等级</span><strong>Lv.{state.sessionStats.peakLevel}</strong></div>
+                  <div className="stats-item"><span>造成伤害</span><strong>{Math.round(state.sessionStats.damageDealt).toLocaleString()}</strong></div>
+                  <div className="stats-item"><span>承受伤害</span><strong>{Math.round(state.sessionStats.damageTaken).toLocaleString()}</strong></div>
+                  <div className="stats-item"><span>弹丸发射</span><strong>{state.sessionStats.projectilesFired}</strong></div>
+                  <div className="stats-item"><span>金色卵鞘</span><strong>{state.runGoldenEggsCollected}</strong></div>
+                  <div className="stats-item"><span>移动键</span><strong>{state.sessionStats.usedMovementKeys ? "已使用" : "未使用"}</strong></div>
+                  <div className="stats-item"><span>快进测试</span><strong>{state.sessionStats.usedCheat ? "已使用" : "未使用"}</strong></div>
+                </div>
+                <div className="modal-actions">
+                  <button className="button-primary" type="button" onClick={restartRun}>
+                    再来一局
+                  </button>
+                  <button className="button-secondary" type="button" onClick={onReturnToMenu}>
+                    返回主菜单
+                  </button>
+                </div>
+              </>
+            ) : null}
+
             {state.runState === "lost" ? (
               <>
                 <p className="menu-eyebrow">DEFEAT</p>
                 <h2>你被虫潮啃穿了</h2>
                 <p className="overlay-copy">这次走位没顶住。下一局试试更早拿攻速、移速、自动副炮或者环绕弹。</p>
                 <div className="stats-grid">
+                  <div className="stats-item"><span>本局分数</span><strong>{scoreText}</strong></div>
                   <div className="stats-item"><span>存活时间</span><strong>{formatTime(state.timer)}</strong></div>
                   <div className="stats-item"><span>击杀总数</span><strong>{state.sessionStats.kills}</strong></div>
                   <div className="stats-item"><span>Boss 击败</span><strong>{state.sessionStats.bossesDefeated}</strong></div>

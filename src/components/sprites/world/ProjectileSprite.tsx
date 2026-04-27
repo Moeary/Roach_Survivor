@@ -21,11 +21,29 @@ export default function ProjectileSprite({ projectile }: { projectile: Projectil
     );
   }
 
+  const shellRx = projectile.variant === "auto" ? projectile.radius * 1.15 : projectile.radius * 1.34;
+  const shellRy = projectile.variant === "auto" ? projectile.radius * 0.62 : projectile.radius * 0.74;
+  const ridgeCount = projectile.variant === "auto" ? 3 : 4;
+
   return (
     <g transform={`translate(${toFixed(projectile.x)} ${toFixed(projectile.y)}) rotate(${toFixed(angle)})`}>
-      <ellipse cx="-8" cy="0" rx="16" ry="7" fill="rgba(198, 255, 92, 0.16)" />
-      <ellipse rx={projectile.variant === "auto" ? "12" : "15"} ry={projectile.variant === "auto" ? "6" : "8"} fill={projectile.tint} />
-      <ellipse cx="4" rx={projectile.variant === "auto" ? "6" : "8"} ry={projectile.variant === "auto" ? "4" : "5"} fill="rgba(116, 86, 58, 0.55)" />
+      <ellipse cx={toFixed(-projectile.radius * 0.42)} cy={toFixed(projectile.radius * 0.42)} rx={toFixed(shellRx * 1.08)} ry={toFixed(shellRy * 0.58)} fill="rgba(0, 0, 0, 0.34)" />
+      <ellipse rx={toFixed(shellRx)} ry={toFixed(shellRy)} fill="url(#eggcaseGradient)" stroke="#22070a" strokeWidth="3" />
+      <ellipse cx={toFixed(shellRx * 0.26)} cy={toFixed(-shellRy * 0.22)} rx={toFixed(shellRx * 0.32)} ry={toFixed(shellRy * 0.24)} fill="#c35a45" opacity="0.44" />
+      {Array.from({ length: ridgeCount }, (_, index) => {
+        const x = -shellRx * 0.48 + index * (shellRx * 0.32);
+        return (
+          <path
+            key={`ridge-${projectile.id}-${index}`}
+            d={`M ${toFixed(x)} ${toFixed(-shellRy * 0.72)} C ${toFixed(x - shellRx * 0.08)} ${toFixed(-shellRy * 0.26)}, ${toFixed(x - shellRx * 0.06)} ${toFixed(shellRy * 0.22)}, ${toFixed(x + shellRx * 0.02)} ${toFixed(shellRy * 0.68)}`}
+            stroke="#160507"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            opacity="0.62"
+            fill="none"
+          />
+        );
+      })}
     </g>
   );
 }

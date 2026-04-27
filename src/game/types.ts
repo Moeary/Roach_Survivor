@@ -1,4 +1,4 @@
-export type RunState = "running" | "paused" | "levelup" | "relicChoice" | "won" | "lost";
+export type RunState = "running" | "paused" | "levelup" | "relicChoice" | "won" | "lost" | "settled";
 export type DifficultyId = "easy" | "normal" | "hard";
 export type EnemyTypeId =
   | "nymph"
@@ -20,8 +20,8 @@ export type EnemyTypeId =
   | "boss";
 export type BossRole = "wave" | "summon";
 export type BossActionState = "chase" | "teleport-windup" | "teleport-recover" | "dash-windup" | "dash-active";
-export type DecorationType = "puddle" | "crumb" | "cap" | "drain" | "stain";
-export type ObstacleType = "pipe" | "barrel" | "trash";
+export type DecorationType = "puddle" | "shallowWater" | "crumb" | "cap" | "drain" | "stain";
+export type ObstacleType = "pipe" | "barrel" | "trash" | "deepWater" | "can" | "cigarette" | "dropping";
 export type PickupType = "xp" | "goldEgg";
 export type ProjectileVariant = "manual" | "auto" | "enemyRanged";
 export type MetaUpgradeId =
@@ -275,6 +275,8 @@ export interface PickupEntity {
   y: number;
   radius: number;
   value: number;
+  age: number;
+  lifetime?: number;
   alive: boolean;
 }
 
@@ -436,6 +438,7 @@ export interface GameState {
 }
 
 export interface SessionStats {
+  score: number;
   kills: number;
   damageDealt: number;
   damageTaken: number;

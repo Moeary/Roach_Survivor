@@ -35,6 +35,8 @@ const WORLD_GENERATION_RADIUS = 2;
 const CONTACT_COOLDOWN = 0.62;
 const PLAYER_SAFE_RADIUS = 210;
 const OBSTACLE_PADDING = 8;
+const SHALLOW_WATER_SLOW_MULTIPLIER = 0.68;
+const XP_PICKUP_LIFETIME_SECONDS = 60;
 const BOSS_DASH_MIN_DISTANCE = 640;
 const BOSS_DASH_MAX_DISTANCE = 1320;
 
@@ -160,6 +162,32 @@ export const BOSS_WAVE_CONFIGS: Record<number, BossWaveConfig> = {
 
 type EnemyDefeatCause = "hit" | "explode" | "shock";
 
+const SCORE_DIFFICULTY_MULTIPLIER: Record<DifficultyId, number> = {
+  easy: 1,
+  normal: 1.5,
+  hard: 2,
+};
+
+const ENEMY_SCORE_VALUES: Record<EnemyTypeId, number> = {
+  nymph: 10,
+  adult: 20,
+  guard: 45,
+  skitter: 35,
+  brute: 70,
+  stinger: 55,
+  razor: 90,
+  carrier: 110,
+  behemoth: 160,
+  phantom: 100,
+  spitter: 35,
+  hunter: 70,
+  artillery: 140,
+  splitter: 60,
+  shade: 120,
+  sludge: 80,
+  boss: 1000,
+};
+
 
 function distance(aX: number, aY: number, bX: number, bY: number): number {
   return Math.hypot(bX - aX, bY - aY);
@@ -260,17 +288,66 @@ function resolveAgainstObstacles(
   }
 }
 
+function getDecorationCollisionRadius(decoration: GameState["decorations"][number]): number {
+  if (decoration.type === "shallowWater" || decoration.type === "puddle") {
+    return 74 * decoration.scale;
+  }
+
+  return 0;
+}
+
+function getShallowWaterSpeedMultiplier(state: GameState, x: number, y: number, radius: number): number {
+  const inShallowWater = state.decorations.some((decoration) => {
+    if (decoration.type !== "shallowWater" && decoration.type !== "puddle") {
+      return false;
+    }
+
+    return distance(x, y, decoration.x, decoration.y) <= getDecorationCollisionRadius(decoration) + radius * 0.35;
+  });
+
+  return inShallowWater ? SHALLOW_WATER_SLOW_MULTIPLIER : 1;
+}
+
+function getObstacleRadius(type: ObstacleType): number {
+  if (type === "deepWater") {
+    return randomRange(62, 92);
+  }
+
+  if (type === "can") {
+    return randomRange(24, 34);
+  }
+
+  if (type === "cigarette") {
+    return randomRange(18, 28);
+  }
+
+  if (type === "dropping") {
+    return randomRange(30, 44);
+  }
+
+  if (type === "pipe") {
+    return randomRange(34, 54);
+  }
+
+  if (type === "barrel") {
+    return randomRange(28, 40);
+  }
+
+  return randomRange(38, 54);
+}
+
 function generateDecoration(state: GameState, chunkX: number, chunkY: number, index: number): void {
-  const propTypes: DecorationType[] = ["puddle", "crumb", "cap", "drain", "stain"];
+  const propTypes: DecorationType[] = ["shallowWater", "drain", "stain", "puddle", "cap", "crumb", "shallowWater"];
   const baseX = chunkX * CHUNK_SIZE;
   const baseY = chunkY * CHUNK_SIZE;
+  const type = propTypes[(index + chunkX + chunkY + propTypes.length * 10) % propTypes.length]!;
 
   state.decorations.push({
     id: `prop-${chunkX}-${chunkY}-${index}`,
-    type: propTypes[(index + chunkX + chunkY + propTypes.length * 10) % propTypes.length]!,
+    type,
     x: baseX + randomRange(48, CHUNK_SIZE - 48),
     y: baseY + randomRange(48, CHUNK_SIZE - 48),
-    scale: randomRange(0.72, 1.84),
+    scale: type === "shallowWater" || type === "puddle" ? randomRange(0.9, 1.85) : randomRange(0.72, 1.62),
     rotation: randomRange(0, 360),
   });
 }
@@ -278,7 +355,7 @@ function generateDecoration(state: GameState, chunkX: number, chunkY: number, in
 function createObstacle(state: GameState, chunkX: number, chunkY: number, type: ObstacleType, index: number): void {
   const baseX = chunkX * CHUNK_SIZE;
   const baseY = chunkY * CHUNK_SIZE;
-  const radius = type === "pipe" ? randomRange(32, 52) : type === "barrel" ? randomRange(28, 40) : randomRange(42, 58);
+  const radius = getObstacleRadius(type);
 
   for (let attempt = 0; attempt < 14; attempt += 1) {
     const x = baseX + randomRange(96, CHUNK_SIZE - 96);
@@ -319,8 +396,8 @@ function generateChunk(state: GameState, chunkX: number, chunkY: number): void {
     generateDecoration(state, chunkX, chunkY, index);
   }
 
-  const obstacleTypes: ObstacleType[] = ["pipe", "barrel", "trash"];
-  const obstacleCount = Math.random() < 0.68 ? 1 + Math.floor(randomRange(0, 2.8)) : 0;
+  const obstacleTypes: ObstacleType[] = ["deepWater", "can", "cigarette", "dropping", "pipe", "can", "trash"];
+  const obstacleCount = Math.random() < 0.78 ? 1 + Math.floor(randomRange(0, 3.1)) : 0;
 
   for (let index = 0; index < obstacleCount; index += 1) {
     createObstacle(state, chunkX, chunkY, obstacleTypes[Math.floor(randomRange(0, obstacleTypes.length))]!, index);
@@ -460,6 +537,7 @@ export function createGameState(setup?: RunSetup): GameState {
     relics: [],
     relicChoices: [],
     sessionStats: {
+      score: 0,
       kills: 0,
       damageDealt: 0,
       damageTaken: 0,
@@ -483,18 +561,18 @@ export function createGameState(setup?: RunSetup): GameState {
 
 export function getPhaseLabel(state: GameState): string {
   if (state.bossSpawned && !state.bossDefeated) {
-    return `母巢清算 ${state.bossWavesSpawned}/${state.difficulty.bossWaves}`;
+    return `第 ${state.bossWavesSpawned} 阶段 Boss 战`;
   }
 
   if (state.timer < STAGE_TWO_START_TIME || state.difficulty.bossWaves <= 1) {
-    return "孵化期";
+    return "第一阶段";
   }
 
   if (state.timer < STAGE_THREE_START_TIME || state.difficulty.bossWaves <= 2) {
-    return "泛滥期";
+    return "第二阶段";
   }
 
-  return "硬壳围城";
+  return "第三阶段";
 }
 
 export function getStatusLabel(state: GameState): string {
@@ -516,6 +594,10 @@ export function getStatusLabel(state: GameState): string {
 
   if (state.runState === "lost") {
     return "壳碎了";
+  }
+
+  if (state.runState === "settled") {
+    return "本局结算";
   }
 
   if (state.bossSpawned && !state.bossDefeated) {
@@ -626,6 +708,8 @@ function spawnPickup(state: GameState, x: number, y: number, value: number, type
     y,
     radius: type === "goldEgg" ? 13 + Math.min(16, value * 1.1) : 11 + value * 1.5,
     value,
+    age: 0,
+    lifetime: type === "xp" ? XP_PICKUP_LIFETIME_SECONDS : undefined,
     alive: true,
   });
   state.nextPickupId += 1;
@@ -776,9 +860,21 @@ function splitEnemyOnDeath(state: GameState, enemy: EnemyEntity): void {
   });
 }
 
+function getEnemyScore(state: GameState, enemy: EnemyEntity): number {
+  const difficultyMultiplier = SCORE_DIFFICULTY_MULTIPLIER[state.difficulty.id] ?? 1;
+  const baseScore = enemy.type === "boss"
+    ? enemy.bossRole === "summon"
+      ? 420 + (enemy.bossWave ?? 1) * 120
+      : 1000 + (enemy.bossWave ?? 1) * 500
+    : ENEMY_SCORE_VALUES[enemy.type];
+
+  return Math.round(baseScore * difficultyMultiplier);
+}
+
 function defeatEnemy(state: GameState, enemy: EnemyEntity, cause: EnemyDefeatCause = "hit"): void {
   enemy.alive = false;
   state.sessionStats.kills += 1;
+  state.sessionStats.score = (state.sessionStats.score ?? 0) + getEnemyScore(state, enemy);
   const isMajorBoss = enemy.type === "boss" && enemy.bossRole !== "summon";
 
   if (isMajorBoss) {
@@ -1437,7 +1533,7 @@ function updatePlayerMovement(state: GameState, input: InputState, dt: number): 
     direction = normalize(axisX, axisY);
   }
 
-  const speedMul = player.speedBuffTimer > 0 ? 1.25 : 1;
+  const speedMul = (player.speedBuffTimer > 0 ? 1.25 : 1) * getShallowWaterSpeedMultiplier(state, player.x, player.y, player.radius);
 
   if (player.speedBuffTimer > 0) {
     player.speedBuffTimer = Math.max(0, player.speedBuffTimer - dt);
@@ -1589,6 +1685,7 @@ function updateEnemies(state: GameState, dt: number): void {
       const ranged = ENEMY_TYPES[enemy.type].ranged;
       const statusSpeedMul = getEnemySpeedMultiplier(enemy);
       const specialSpeedMul = getEnemySpecialSpeedMultiplier(enemy);
+      const terrainSpeedMul = getShallowWaterSpeedMultiplier(state, enemy.x, enemy.y, enemy.radius);
 
       if (ranged) {
         const distToPlayer = distance(enemy.x, enemy.y, player.x, player.y);
@@ -1596,8 +1693,8 @@ function updateEnemies(state: GameState, dt: number): void {
         const shouldHalt = !ranged.moveWhileFiring && distToPlayer <= ranged.stopDistance;
         const speedScale = shouldHalt ? 0 : ranged.moveWhileFiring && inRange ? 0.5 : 1;
 
-        enemy.vx = direction.x * enemy.speed * speedScale * statusSpeedMul * specialSpeedMul;
-        enemy.vy = direction.y * enemy.speed * speedScale * statusSpeedMul * specialSpeedMul;
+        enemy.vx = direction.x * enemy.speed * speedScale * statusSpeedMul * specialSpeedMul * terrainSpeedMul;
+        enemy.vy = direction.y * enemy.speed * speedScale * statusSpeedMul * specialSpeedMul * terrainSpeedMul;
         enemy.x += enemy.vx * dt;
         enemy.y += enemy.vy * dt;
 
@@ -1619,8 +1716,8 @@ function updateEnemies(state: GameState, dt: number): void {
       } else {
         const aggression = enemy.type === "boss" ? 1 : 1 + Math.min(0.35, state.timer * 0.0011);
 
-        enemy.vx = direction.x * enemy.speed * aggression * statusSpeedMul * specialSpeedMul;
-        enemy.vy = direction.y * enemy.speed * aggression * statusSpeedMul * specialSpeedMul;
+        enemy.vx = direction.x * enemy.speed * aggression * statusSpeedMul * specialSpeedMul * terrainSpeedMul;
+        enemy.vy = direction.y * enemy.speed * aggression * statusSpeedMul * specialSpeedMul * terrainSpeedMul;
         enemy.x += enemy.vx * dt;
         enemy.y += enemy.vy * dt;
 
@@ -1827,14 +1924,14 @@ function updateManualFire(state: GameState, input: InputState, dt: number): void
       life: 1.5,
       radius: 12,
       speed: player.stats.projectileSpeed,
-      tint: "#f4f0d2",
+      tint: "#5c1018",
     });
 
     createEffect(state, {
       x: player.x + Math.cos(player.aimAngle) * (player.radius + 8),
       y: player.y + Math.sin(player.aimAngle) * (player.radius + 8),
       radius: 14,
-      tint: "#ecf4bf",
+      tint: "#8e1d24",
       duration: 0.18,
     });
     queueGameEvent(state, "playerShot");
@@ -1870,7 +1967,7 @@ function updateAutoTurrets(state: GameState, dt: number): void {
       life: 1.2,
       radius: 10,
       speed: player.stats.projectileSpeed * 0.92,
-      tint: "#dff6a8",
+      tint: "#7a1822",
       spreadCap: 0.22,
     });
 
@@ -1878,7 +1975,7 @@ function updateAutoTurrets(state: GameState, dt: number): void {
       x: player.x + Math.cos(angle) * (player.radius + 2),
       y: player.y + Math.sin(angle) * (player.radius + 2),
       radius: 12,
-      tint: "#c8ff96",
+      tint: "#8e1d24",
       duration: 0.16,
     });
     queueGameEvent(state, "playerShot");
@@ -2265,6 +2362,13 @@ function updatePickups(state: GameState, dt: number): void {
 
   state.pickups.forEach((pickup) => {
     if (!pickup.alive) {
+      return;
+    }
+
+    pickup.age = (pickup.age ?? 0) + dt;
+
+    if (pickup.lifetime !== undefined && pickup.age >= pickup.lifetime) {
+      pickup.alive = false;
       return;
     }
 

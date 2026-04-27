@@ -30,7 +30,6 @@ function getWorldSkinScale(skinId: PlayerSkinId): number {
 }
 
 export default function PlayerSprite({ player, skinId = "labStandard" }: { player: PlayerEntity; skinId?: PlayerSkinId }) {
-  const aimAngle = (player.aimAngle * 180) / Math.PI;
   const isBlinking = player.contactTimer > 0 && Math.floor(player.contactTimer * 18) % 2 === 0;
   const spriteScale = getWorldSkinScale(skinId);
 
@@ -38,11 +37,6 @@ export default function PlayerSprite({ player, skinId = "labStandard" }: { playe
     <g transform={`translate(${toFixed(player.x)} ${toFixed(player.y)})`}>
       <circle r={toFixed(player.stats.pickupRadius + 72)} fill="url(#slimeGlow)" opacity="0.08" filter="url(#softGlow)" />
       <circle r={toFixed(player.stats.pickupRadius)} fill="none" stroke="rgba(198, 255, 92, 0.14)" strokeWidth="2" strokeDasharray="10 14" />
-      <g transform={`rotate(${toFixed(aimAngle)})`}>
-        <path d="M 12 0 H 46" stroke="rgba(250, 255, 224, 0.42)" strokeWidth="4.5" strokeLinecap="round" />
-        <ellipse cx="56" cy="0" rx="16" ry="9" fill="#f4f0d2" />
-        <ellipse cx="62" cy="0" rx="8" ry="5" fill="#dccda4" />
-      </g>
       <g opacity={isBlinking ? 0.55 : 1}>
         <RoachMascot scale={spriteScale} blink={isBlinking} variant={skinId} />
       </g>
